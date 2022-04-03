@@ -79,6 +79,10 @@ float calibrate_gain() {
     analogWrite(LED_PIN, x1);  
     delay(1000);
     y1 = volt_to_lux(n_to_volt(analogRead(A0)), M, B);
+
+    // turns LED off
+    analogWrite(LED_PIN, 0);  
+    delay(1000);
     
     // gain computation
     G = (y1 - y0) / (x1 - x0);

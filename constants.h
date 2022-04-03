@@ -1,5 +1,5 @@
-#ifndef CONSTANTS
-#define CONSTANTS
+#ifndef CONSTANTS_H
+#define CONSTANTS_H
 
 const int R2 = 10000;
 const int LED_PIN = 15;

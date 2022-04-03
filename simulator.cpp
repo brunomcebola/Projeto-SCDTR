@@ -5,6 +5,7 @@
 #include "constants.h"
 #include "mixin.h"
 
+using namespace std;
 
 // private class functions
 
@@ -30,4 +31,8 @@ void Simulator::set_simualtion(int initial_time, int initial_level,
 
 float Simulator::simulate(long int t) {
     return _v_f - (_v_f - _v_i) * exp(-((t - _t_0) * pow(10, -6) / _tau));
+}
+
+float Simulator::get_gain() {
+    return _G;
 }

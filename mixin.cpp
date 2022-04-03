@@ -6,7 +6,17 @@
 
 float n_to_volt(int n) { return (n * V_REF) / ANALOG_MAX; }
 
+float n_to_lux(int n, float G) { return n * G; }
+
 int volt_to_n(float v) { return (v * ANALOG_MAX) / V_REF; }
+
+float volt_to_lux(float v, float m, float b) {
+    return pow(10, (log10(get_ldr_resistance_from_v(v, m, b)) - b) / m);
+}
+
+int lux_to_n(float lux, float G) { return lux / G; }
+
+float lux_to_volt(float lux, float G) { return n_to_volt(lux_to_n(lux, G)); }
 
 float get_ldr_resistance_from_v(float v, float m, float b) {
     return ((R2 * V_REF) / v) - R2;
@@ -14,10 +24,6 @@ float get_ldr_resistance_from_v(float v, float m, float b) {
 
 float get_ldr_resistance_from_lux(float lux, float m, float b) {
     return pow(10, m * log10(lux) + b);
-}
-
-float volt_to_lux(float v, float m, float b) {
-    return pow(10, (log10(get_ldr_resistance_from_v(v, m, b)) - b) / m);
 }
 
 float get_tau_for_n(int n) {

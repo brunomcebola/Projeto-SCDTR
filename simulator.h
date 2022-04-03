@@ -1,8 +1,6 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
-using namespace std;
-
 class Simulator {
    private:
     // internal members
@@ -14,6 +12,7 @@ class Simulator {
     void set_simulator(float m, float b, float G);
     void set_simualtion(int initial_time, int initial_level, int target_level);
     float simulate(long int t);
+    float get_gain();
 };
 
 #endif
