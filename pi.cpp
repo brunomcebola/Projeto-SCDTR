@@ -19,3 +19,5 @@ float Pi::calc(float u_ref, float u) {
 float Pi::get_up() { return _up; }
 
 float Pi::get_ui() { return _ui; }
+
+void Pi::set_ui(float ui) { _ui = ui; }

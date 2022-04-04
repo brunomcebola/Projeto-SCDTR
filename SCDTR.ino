@@ -12,8 +12,6 @@ Controller controller;
 long int initial_time = 0;
 long int final_time = 0;
 
-float u_fb = 0;
-float u_ff = 0;
 float u_sim = 0;
 float u_real = 0;
 float u_cont = 0;
@@ -34,7 +32,7 @@ void setup() {
 
     simulator.set_simulator(M, B, G);
 
-    controller.set_lux_ref(5);
+    controller.set_lux_ref(0);
 
     simulator.set_simualtion(
         micros(), analogRead(A0),
@@ -45,14 +43,18 @@ void setup() {
 
 void loop() {
     initial_time = micros();
+    
+    interface();
 
     u_sim = simulator.simulate(micros());
     u_real = n_to_volt(analogRead(A0));
 
-    u_fb = controller.calc_u_fb(u_sim, u_real);
-    u_ff = controller.calc_u_ff(simulator.get_gain());
+    controller.anti_wind_up();
 
-    u_cont = controller.get_control_signal(u_fb + u_ff);
+    controller.calc_u_fb(u_sim, u_real);
+    controller.calc_u_ff(simulator.get_gain());
+
+    u_cont = controller.get_control_signal();
 
     analogWrite(LED_PIN, volt_to_n(u_cont));
 

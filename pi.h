@@ -10,6 +10,7 @@ class Pi {
     float calc(float u_ref, float u);
     float get_up();
     float get_ui();
+    void set_ui(float ui);
 };
 
 #endif

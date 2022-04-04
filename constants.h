@@ -10,4 +10,6 @@ const int ANALOG_FREQ = 60000;
 const float M = -0.9;
 const float B = 6.2;
 
+const char LUMINAIRE = '1';
+
 #endif
