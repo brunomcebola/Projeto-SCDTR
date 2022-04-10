@@ -163,13 +163,35 @@ void interface() {
 
                         break;
 
+                    // Get accumulated energy consumption at desk i since the
+                    // last system restart
+                    case 'e':
+                        lum = Serial.read();
+                        if (lum == LUMINAIRE) {
+                            Serial.printf("e %c %f\n", lum, total_energy);
+                        }
+
+                        break;
+
+                    // Get accumulated flicker error at desk i since last system
+                    // restart
+                    case 'f':
+                        lum = Serial.read();
+                        if (lum == LUMINAIRE) {
+                            Serial.printf(
+                                "f %c %f\n", lum,
+                                flicker_error / (iteration_counter - 2));
+                        }
+
+                        break;
+
                     // Get measured illuminance at luminaire i
                     case 'l':
                         lum = Serial.read();
                         if (lum == LUMINAIRE) {
-                            Serial.printf(
-                                "l %c %f\n", lum,
-                                n_to_lux(analogRead(A0), simulator.get_gain()));
+                            Serial.printf("l %c %f\n", lum,
+                                          ldr_volt_to_lux(
+                                              n_to_volt(analogRead(A0)), M, B));
                         }
 
                         break;
@@ -188,8 +210,9 @@ void interface() {
                     case 'p':
                         lum = Serial.read();
                         if (lum == LUMINAIRE) {
-                            Serial.printf("p %c %f\n", lum,
-                                          (controller.get_u() / V_REF) * NOMINAL_POWER);
+                            Serial.printf(
+                                "p %c %f\n", lum,
+                                (controller.get_u() / V_REF) * NOMINAL_POWER);
                         }
 
                         break;
@@ -214,6 +237,17 @@ void interface() {
 
                         break;
 
+                    // Get accumulated visibility error at desk i since last
+                    // system restart
+                    case 'v':
+                        lum = Serial.read();
+                        if (lum == LUMINAIRE) {
+                            Serial.printf("v %c %f\n", lum,
+                                          visibility_error / iteration_counter);
+                        }
+
+                        break;
+
                     // Get feedforward control state at desk i
                     case 'w':
                         lum = Serial.read();
@@ -229,8 +263,9 @@ void interface() {
                         lum = Serial.read();
                         if (lum == LUMINAIRE) {
                             Serial.printf(
-                                "w %c %d\n", lum,
-                                n_to_lux(analogRead(A0), simulator.get_gain()) -
+                                "x %c %d\n", lum,
+                                ldr_volt_to_lux(n_to_volt(analogRead(A0)), M,
+                                                B) -
                                     n_to_lux(volt_to_n(controller.get_u()),
                                              simulator.get_gain()));
                         }

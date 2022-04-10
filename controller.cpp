@@ -37,7 +37,7 @@ void Controller::set_controller(float T, float kp, float ki) {
     _u_fb = 0;
     _lux_ref = 0;
     _use_fb = true;
-    _use_ff = true;
+    _use_ff = true;  
     _use_awp = true;
     _pi.set_pi(T, kp, ki);
 }

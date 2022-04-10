@@ -10,7 +10,7 @@ float n_to_lux(int n, float G) { return n * G; }
 
 int volt_to_n(float v) { return (v * ANALOG_MAX) / V_REF; }
 
-float volt_to_lux(float v, float m, float b) {
+float ldr_volt_to_lux(float v, float m, float b) {
     return pow(10, (log10(get_ldr_resistance_from_v(v, m, b)) - b) / m);
 }
 

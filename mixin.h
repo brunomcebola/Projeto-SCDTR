@@ -4,7 +4,7 @@
 float n_to_volt(int n);
 float n_to_lux(int n, float G);
 int volt_to_n(float v);
-float volt_to_lux(float v, float m, float b);
+float ldr_volt_to_lux(float v, float m, float b);
 int lux_to_n(float lux, float G);
 float lux_to_volt(float lux, float G);
 float get_ldr_resistance_from_v(float v, float m, float b);

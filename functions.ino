@@ -73,12 +73,12 @@ float calibrate_gain() {
     // sets LED to x0 intensity
     analogWrite(LED_PIN, x0);  
     delay(1000);
-    y0 = volt_to_lux(n_to_volt(analogRead(A0)), M, B);
+    y0 = ldr_volt_to_lux(n_to_volt(analogRead(A0)), M, B);
 
     // sets LED to x1 intensity
     analogWrite(LED_PIN, x1);  
     delay(1000);
-    y1 = volt_to_lux(n_to_volt(analogRead(A0)), M, B);
+    y1 = ldr_volt_to_lux(n_to_volt(analogRead(A0)), M, B);
 
     // turns LED off
     analogWrite(LED_PIN, 0);  
