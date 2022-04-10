@@ -17,7 +17,7 @@ class Controller {
     float get_lux_ref();
 
     float get_control_signal();
-    float get_control_signal(float u);
+    float get_control_signal(float u); 
 
     float calc_u_fb(float u_sim, float u_real);
 

@@ -12,4 +12,6 @@ const float B = 6.2;
 
 const char LUMINAIRE = '1';
 
+const float NOMINAL_POWER = 1;
+
 #endif

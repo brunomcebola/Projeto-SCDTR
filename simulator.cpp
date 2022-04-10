@@ -25,14 +25,12 @@ void Simulator::set_simualtion(int initial_time, int initial_level,
 
     _v_i = n_to_volt(initial_level);
 
-    _v_f = (V_REF * R2) /
-           (R2 + get_ldr_resistance_from_lux(_G * target_level, _m, _b));
+    _v_f = (V_REF * R2) / (R2 + get_ldr_resistance_from_lux(
+                                    n_to_lux(target_level, _G), _m, _b));
 }
 
 float Simulator::simulate(long int t) {
     return _v_f - (_v_f - _v_i) * exp(-((t - _t_0) * pow(10, -6) / _tau));
 }
 
-float Simulator::get_gain() {
-    return _G;
-}
+float Simulator::get_gain() { return _G; }

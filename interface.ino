@@ -1,10 +1,3 @@
-char lum = '\0';
-char cmd = '\0';
-char sub_cmd = '\0';
-
-int val_i = 0;
-float val_f = 0.0f;
-
 template <class T>
 T read_number(int sel) {
     /*
@@ -68,18 +61,51 @@ void interface() {
 
             // Set feedback control state at desk i
             case 'b':
-                lum = Serial.read();
+                sub_cmd = Serial.read();
                 Serial.read();
 
-                if (lum == LUMINAIRE) {
-                    val_i = read_number<int>(0);
+                switch (sub_cmd) {
+                    case 'd':
+                        lum = Serial.read();
+                        Serial.read();
 
-                    controller.set_fb_usage(val_i);
+                        if (lum == LUMINAIRE) {
+                            buffer_duty_cycle = !buffer_duty_cycle;
+                            buffer_read_size = buffer.get_used_space();
+                            buffer_read_counter = 0;
+                            Serial.printf("b d %c ", lum);
+                        }
 
-                    Serial.println("ack");
+                        break;
 
-                } else {
-                    Serial.println("err");
+                    case 'l':
+                        lum = Serial.read();
+                        Serial.read();
+
+                        if (lum == LUMINAIRE) {
+                            buffer_lux = !buffer_lux;
+                            buffer_read_size = buffer.get_used_space();
+                            buffer_read_counter = 0;
+                            Serial.printf("b l %c ", lum);
+                        }
+
+                        break;
+
+                    default:
+                        lum = sub_cmd;
+
+                        if (lum == LUMINAIRE) {
+                            val_i = read_number<int>(0);
+
+                            controller.set_fb_usage(val_i);
+
+                            Serial.println("ack");
+
+                        } else {
+                            Serial.println("err");
+                        }
+
+                        break;
                 }
 
                 break;
@@ -158,12 +184,32 @@ void interface() {
 
                         break;
 
+                    // Get instantaneous power consumption at desk i
+                    case 'p':
+                        lum = Serial.read();
+                        if (lum == LUMINAIRE) {
+                            Serial.printf("p %c %f\n", lum,
+                                          (controller.get_u() / V_REF) * NOMINAL_POWER);
+                        }
+
+                        break;
+
                     // Get current illuminance reference at luminaire i
                     case 'r':
                         lum = Serial.read();
                         if (lum == LUMINAIRE) {
                             Serial.printf("r %c %f\n", lum,
                                           controller.get_lux_ref());
+                        }
+
+                        break;
+
+                    // Get elapsed time since last restart
+                    case 't':
+                        lum = Serial.read();
+                        if (lum == LUMINAIRE) {
+                            Serial.printf("t %c %.2f\n", lum,
+                                          micros() * pow(10, -6));
                         }
 
                         break;
@@ -177,7 +223,22 @@ void interface() {
                         }
 
                         break;
+
+                    // Get current external illuminance at desk i
+                    case 'x':
+                        lum = Serial.read();
+                        if (lum == LUMINAIRE) {
+                            Serial.printf(
+                                "w %c %d\n", lum,
+                                n_to_lux(analogRead(A0), simulator.get_gain()) -
+                                    n_to_lux(volt_to_n(controller.get_u()),
+                                             simulator.get_gain()));
+                        }
+
+                        break;
                 }
+
+                break;
 
             // Set current occupancy state at desk i
             case 'o':
@@ -215,6 +276,35 @@ void interface() {
 
                 } else {
                     Serial.println("err");
+                }
+
+                break;
+
+            // Start/Stop stream of real-time variable x of desk i
+            case 's':
+                sub_cmd = Serial.read();
+                Serial.read();
+
+                switch (sub_cmd) {
+                    case 'd':
+                        lum = Serial.read();
+                        Serial.read();
+
+                        if (lum == LUMINAIRE) {
+                            stream_duty_cycle = !stream_duty_cycle;
+                        }
+
+                        break;
+
+                    case 'l':
+                        lum = Serial.read();
+                        Serial.read();
+
+                        if (lum == LUMINAIRE) {
+                            stream_lux = !stream_lux;
+                        }
+
+                        break;
                 }
 
                 break;

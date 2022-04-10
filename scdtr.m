@@ -27,13 +27,16 @@ end
 tau = array2table(horzcat((max_level_value/8:max_level_value/8:max_level_value)', tau'));
 tau_fit=fit(tau.Var1,tau.Var2,'smoothingspline');
 
-figure();
-plot(data.Var1, data.Var2);
+figure('DefaultAxesFontSize',35);
+plot(data.Var1, data.Var2, 'LineWidth', 2);
 hold on;
-plot(m_mean.Var1, m_mean.Var2, 'LineWidth', 2);
+plot(m_mean.Var1, m_mean.Var2, 'LineWidth', 4);
 xlim([data.Var1(1) data.Var1(end)]);
+ylabel("u[V]");
+xlabel("t[\mus]");
+legend({'Data','Moving average'})
 
-figure();
+figure('DefaultAxesFontSize',35);
 plot(tau.Var1, tau.Var2);
 hold on;
 plot(tau_fit);
