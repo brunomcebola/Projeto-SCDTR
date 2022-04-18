@@ -27,10 +27,6 @@ int n_i2c_errors = 0;
 uint8_t this_pico_id[8];
 uint8_t i2c_address;
 
-uint8_t i2c_all_adresses[NUMBER_OF_RPI]={0b0001111 + 1, 0b0001111 + 2 , 0b0001111 + 3};
-
-float k[3][3]{0};
-
 void setup() {
   Serial.begin(115200);
   delay(5000);
@@ -55,27 +51,27 @@ void setup() {
 
   Wire.setClock(100000);
   Wire.begin(); // Initiate as Master
-
   Wire1.setClock(100000);
   Wire1.begin(i2c_address); // Initiate as Slave
   Wire1.onReceive(recv);
   Wire1.onRequest(req);
+}
 
-
+void loop() {
   // put your main code here, to run repeatedly:
   static uint16_t p;
   char print_buf[200];
   byte tx_buf[frame_size];
   uint8_t i2c_broadcast_addr = 0x00;
 
-  my_i2c_msg tx_msg{ i2c_address, millis(), '»'};
+  my_i2c_msg tx_msg{ i2c_address, millis(), p++};
   
   memcpy(tx_buf, &tx_msg, msg_size);
   
   sprintf(print_buf, "0x%02X TX : %02X , %010lu, %05u\n", i2c_address, tx_msg.node, tx_msg.ts, tx_msg.value );
   Serial.write(print_buf, strlen(print_buf));
   
-  i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);
+  i2c_error_code = masterTransmission(i2c_broadcast_addr);
 
   if(i2c_error_code != 0) n_i2c_errors++;
   
@@ -87,7 +83,7 @@ void setup() {
     error_frame_size = 0;
   }
   
-  delay(1000);
+  delay(1);
   
   for( int i = 0; i < input_fifo_size; i++){
     if(input_slot_full[i]){
@@ -99,23 +95,55 @@ void setup() {
     }
   }
 
-  my_i2c_msg tx_msg{ i2c_address, millis(), '!1'};
-  memcpy(tx_buf, &tx_msg, msg_size);
-  i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);
-
-  my_i2c_msg tx_msg{ i2c_address, millis(), '!2'};
-  memcpy(tx_buf, &tx_msg, msg_size);
-  i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);
-
-  my_i2c_msg tx_msg{ i2c_address, millis(), '!3'};
-  memcpy(tx_buf, &tx_msg, msg_size);
-  i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);
-
 }
 
-void loop() {
+// When Slave sends data do this
+void recv(int len) {
   
+  int i, n_available_bytes;
+  byte rx_buf[frame_size]={0};
+  my_i2c_msg msg;
 
+  n_available_bytes = Wire.available();
+  if(n_available_bytes != len){
+    // Do Something for Debug...
+  }
+  
+  for (i = 0; i < len; i++) rx_buf[i] = Wire1.read();
+  
+  if(len > frame_size) {
+    for (i = frame_size; i < len; i++) Wire1.read(); // Flush
+    n_frame_errors_overrun++;
+    error_frame_size = len;
+  }
+  
+  if(len < frame_size) {
+    n_frame_errors_underrun++;
+    error_frame_size = len;
+  }
+  
+  memcpy(&msg, rx_buf, msg_size);
+  
+  for(i = 0; i < input_fifo_size; i++){
+    if(!input_slot_full[i]){
+      input_slot_full[i] = true;
+      input_fifo[i].node = msg.node;
+      input_fifo[i].ts = msg.ts;
+      input_fifo[i].value = msg.value;
+      break;
+    }
+  }
+  if( i == input_fifo_size ) n_overflows++;
+  
+}
+
+// When Master requested data do this
+void req(void){
+
+
+  // Do Nothing
+
+  
 }
 
 // Confirm validity of the node I2C address

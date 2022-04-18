@@ -14,4 +14,8 @@ const char LUMINAIRE = '1';
 
 const float NOMINAL_POWER = 1;
 
+const short int MAX_IDS = 3;
+
+const int NUMBER_OF_RPI = 3;
+
 #endif
