@@ -34,13 +34,7 @@ float k[3][3]{0};
 void setup() {
   Serial.begin(115200);
   delay(5000);
-  flash_get_unique_id(this_pico_id);
-  i2c_address = i2c_validate_addr(); // least significant byte of unique ID
-  Serial.print("My I2C address: ");
-  Serial.println(i2c_address, BIN);
-
-  //this is only for joao
-  if(ID == 4){
+  if(ID == 3){
     Wire.setSDA(20);  // (1,2) - PIN 12 | (3) - PIN 20
     Wire.setSCL(21);  // (1,2) - PIN 13 | (3) - PIN 21
     Wire1.setSDA(18); // (1,2) - PIN 10 | (3) - PIN 18
@@ -55,7 +49,12 @@ void setup() {
 
   Wire.setClock(100000);
   Wire.begin(); // Initiate as Master
-
+  wake_up();
+  flash_get_unique_id(this_pico_id);
+  i2c_address = i2c_validate_addr(); // least significant byte of unique ID
+  Serial.print("My I2C address: ");
+  Serial.println(i2c_address, BIN);
+  
   Wire1.setClock(100000);
   Wire1.begin(i2c_address); // Initiate as Slave
   Wire1.onReceive(recv);
@@ -132,5 +131,24 @@ uint8_t i2c_validate_addr(){
   else if((id >= 0b0000000) && (id <= 0b0000111)) return (0b0001111 + ID);
   else if((id >= 0b1110000) && (id <= 0b1111111)) return (0b0001111 + ID);
   return id;
+  
+}
+
+// Wake Up and Define Node Address
+void wake_up(void){
+
+  uint8_t i2c_broadcast_addr = 0x00;
+  int n_recv, n_read, i;
+  byte rx_buf[frame_size]={0};
+  
+  n_recv = Wire.requestFrom(i2c_broadcast_addr, frame_size, true);
+
+  delay(1);
+  
+  n_read = Wire.available();
+  if(n_read > 0){
+    for (i = 0; i < n_read; i++) rx_buf[i] = Wire.read();
+  }
+  
   
 }
