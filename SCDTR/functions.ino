@@ -209,10 +209,17 @@ void recv(int len) {
 // When Master requested data do this
 void req(void){
 
+  int i, n_available_bytes;
+  byte rx_buf[12]={0};
 
-  // Do Nothing
 
+  n_available_bytes = Wire.available();
+  if( n_available_bytes != 12){
+    Serial.println("ERROR ON REQUEST FROM MASTER");
+  }
   
+  memcpy(k[id], rx_buf, 12);
+ 
 }
 
 //NEEDS TO BE CHECKED
@@ -242,7 +249,7 @@ void calibrationGain(){
     memcpy(tx_buf, &tx_msg, msg_size);
 
     masterTransmission(0b0001111 + i, tx_buf);
-    delay(1000); // wait 1 second before transmitting another message;
+    delay(2500); // wait seconds, that represent the ammount of time needed for calibration
   }
   // request the vectors for the gains matrix (k)
 

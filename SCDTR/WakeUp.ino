@@ -111,6 +111,10 @@ void setup() {
   memcpy(tx_buf, &tx_msg, msg_size);
   i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);
 
+  //example, since i don't know if we want to fix the center.
+  Wire.requestFrom(i2c_all_adresses[0], 12) // vector of 3 floats <- quantity
+  Wire.requestFrom(i2c_all_adresses[1], 12) // vector of 3 floats <- quantity
+
 }
 
 void loop() {
