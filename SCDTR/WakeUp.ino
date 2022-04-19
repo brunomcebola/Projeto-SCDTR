@@ -7,7 +7,7 @@
 struct my_i2c_msg {
   uint8_t node; //source node
   uint32_t ts; //sample time in ms
-  uint16_t value; //sample value
+  char value[3]; //sample value
   my_i2c_msg(uint8_t n = 0, uint32_t t = 0, uint16_t v = 0)
   : node {n}, ts{t}, value{v} {}
 };

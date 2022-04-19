@@ -91,6 +91,7 @@ float calibrate_gain() {
 
     return G;
 }
+
 /****************************
 *          SECOND PART      *
 *****************************/
@@ -225,14 +226,13 @@ void req(void){
 //NEEDS TO BE CHECKED
 int masterTransmission(uint8_t transmission_addr, byte message[]){
 
-  Wire.beginTransmission(i2c_broadcast_addr);
+  Wire.beginTransmission(transmission_addr);
   Wire.write(message, frame_size);
-  Wire.endTransmission();
+  return Wire.endTransmission();
 }
 
 //NEEDS TO BE CHECKED
 int slaveTransmission(uint8_t transmission_addr, byte message[]){
-  Wire1.onRequest(req);
   Wire1.write( k[ID - 1] ); // ID - 1, because id starts in 1
   return Wire1.endTransmission();
 }
