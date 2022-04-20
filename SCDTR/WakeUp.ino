@@ -7,9 +7,10 @@
 struct my_i2c_msg {
   uint8_t node; //source node
   uint32_t ts; //sample time in ms
-  char value[3]; //sample value
-  my_i2c_msg(uint8_t n = 0, uint32_t t = 0, uint16_t v = 0)
-  : node {n}, ts{t}, value{v} {}
+  uint16_t value; //sample value
+  char cmd[3];
+  my_i2c_msg(uint8_t n = 0, uint32_t t = 0, uint16_t v = 0, char c[] = '')
+  : node {n}, ts{t}, value{v}, cmd{c} {}
 };
 
 // Basic I2C Communication Variables
@@ -40,18 +41,11 @@ void setup() {
   Serial.println(i2c_address, BIN);
 
   //this is only for joao
-  if(ID == 4){
-    Wire.setSDA(20);  // (1,2) - PIN 12 | (3) - PIN 20
-    Wire.setSCL(21);  // (1,2) - PIN 13 | (3) - PIN 21
-    Wire1.setSDA(18); // (1,2) - PIN 10 | (3) - PIN 18
-    Wire1.setSCL(19); // (1,2) - PIN 11 | (3) - PIN 19
-  }
-  else{
-    Wire.setSDA(12);  // (1,2) - PIN 12 | (3) - PIN 20
-    Wire.setSCL(13);  // (1,2) - PIN 13 | (3) - PIN 21
-    Wire1.setSDA(10); // (1,2) - PIN 10 | (3) - PIN 18
-    Wire1.setSCL(11); // (1,2) - PIN 11 | (3) - PIN 19
-  }
+  
+  Wire.setSDA(12);
+  Wire.setSCL(13);
+  Wire1.setSDA(10);
+  Wire1.setSCL(11);
 
   Wire.setClock(100000);
   Wire.begin(); // Initiate as Master
@@ -114,6 +108,18 @@ void setup() {
   //example, since i don't know if we want to fix the center.
   Wire.requestFrom(i2c_all_adresses[0], 12) // vector of 3 floats <- quantity
   Wire.requestFrom(i2c_all_adresses[1], 12) // vector of 3 floats <- quantity
+
+  Serial.print(k[0][0]); Serial.print(" ");
+  Serial.print(k[0][1]); Serial.print(" ");
+  Serial.println(k[0][2]);
+
+  Serial.print(k[1][0]); Serial.print(" ");
+  Serial.print(k[1][1]); Serial.print(" ");
+  Serial.println(k[1][2]);
+
+  Serial.print(k[2][0]); Serial.print(" ");
+  Serial.print(k[2][1]); Serial.print(" ");
+  Serial.println(k[2][2]);
 
 }
 

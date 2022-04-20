@@ -184,14 +184,15 @@ void recv(int len) {
       input_fifo[i].node = msg.node;
       input_fifo[i].ts = msg.ts;
       input_fifo[i].value = msg.value;
+      input_fifo[i].cmd = msg.cmd
       break;
     }
   }
   if( i == input_fifo_size ) n_overflows++;
 
   
-  switch (msg.value[0]){
-    case '!': // calibration call
+  switch (msg.cmd[0]){
+    case "!": // calibration call
         if(msg.value[1] == (char) (48 + ID) ){
             calibrateOwnGain();
         }
@@ -199,7 +200,7 @@ void recv(int len) {
             calibrateCrossGain(int msg.value[1].toInt());
         }
       break;
-    case '»':
+    case "»":
       Serial.print("STARTING THE HUB");
       break;  
     default:
