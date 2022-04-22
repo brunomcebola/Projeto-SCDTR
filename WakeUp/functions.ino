@@ -96,10 +96,11 @@ float calibrate_gain() {
 *          SECOND PART      *
 *****************************/
 
-void calibrateOwnGain(){
+void calibrateOwnGain(int crossedId){
   int x0 = ANALOG_MAX / 8;
   int x1 = ANALOG_MAX;
   float y0, y1, G;
+  Serial.println("ENTREI NOS OWN GANHOS");
   // turns LED on to max intensity
   analogWrite(LED_PIN, ANALOG_MAX);  
   delay(500);
@@ -123,13 +124,16 @@ void calibrateOwnGain(){
   delay(500);
     
   // gain computation
-  k[id - 1][id - 1] = (y1 - y0) / (x1 - x0);
+  k[crossedId - 1] = (y1 - y0) / (x1 - x0);
 }
 
 void calibrateCrossGain(int crossedId){
   int x0 = ANALOG_MAX / 8;
   int x1 = ANALOG_MAX;
   float y0, y1, G;
+  Serial.print(crossedId); Serial.print(" ");
+  Serial.println("ENTREI NOS GANHOS");
+  
   // turns LED on to max intensity
   delay(500);
 
@@ -148,7 +152,7 @@ void calibrateCrossGain(int crossedId){
   delay(500);
     
   // gain computation
-  k[id - 1][crossedId] = (y1 - y0) / (x1 - x0);
+  k[crossedId - 1] = (y1 - y0) / (x1 - x0);
 }
 
 // When Slave sends data do this
@@ -184,45 +188,56 @@ void recv(int len) {
       input_fifo[i].node = msg.node;
       input_fifo[i].ts = msg.ts;
       input_fifo[i].value = msg.value;
-      //input_fifo[i].cmd = msg.cmd
+      input_fifo[i].cmd[0] = msg.cmd[0];
+      input_fifo[i].cmd[1] = msg.cmd[1];
+      input_fifo[i].cmd[2] = msg.cmd[2];
       break;
     }
   }
+
   if( i == input_fifo_size ) n_overflows++;
 
-  
   switch (msg.cmd[0]){
     case '!': // calibration call
+        Serial.println(msg.cmd);
         if(msg.cmd[1] == (char) (48 + ID) ){
-            calibrateOwnGain();
+            calibrateOwnGain( msg.cmd[1] - 48);
         }
         else{
-            calibrateCrossGain( (uint16_t) msg.cmd[1] );
+            calibrateCrossGain(  msg.cmd[1] - 48 );
         }
+          Serial.println("DENTRO DO REV");
+          Serial.print(k[0], 6); Serial.print(" ");
+          Serial.print(k[1], 6); Serial.print(" ");
+          Serial.println(k[2], 6);
       break;
     case '?':
-      Serial.print("STARTING THE HUB");
+      Serial.println("STARTING THE HUB");
       break;  
     default:
-      Serial.print("ERROR ON RECEIVING CALL, COMMAND NOT FOUND");
+      Serial.println(msg.cmd[1]);
+      Serial.println("ERROR ON RECEIVING CALL, COMMAND NOT FOUND");
       break;
   }  
 }
 
 // When Master requested data do this
 void req(void){
-
-  int i, n_available_bytes;
-  byte rx_buf[12]={0};
-
-
-  n_available_bytes = Wire.available();
-  if( n_available_bytes != 12){
-    Serial.println("ERROR ON REQUEST FROM MASTER");
+  byte * px = (byte*) &k[0];
+  byte new_message[12];
+  Serial.println("ENTREI NO REQUEST");
+  if(ID == 1){
+    delay(2);
+    Serial.println("ENVIEI K 1 ");
+    memcpy(new_message, px , 4);
+    Wire1.write(new_message, 4);
   }
-  
-  memcpy(k[id], rx_buf, 12);
- 
+  else if(ID == 2){
+    delay(2);
+    Serial.println("ENVIEI K 2 ");
+    memcpy(new_message, k , 12);
+    Wire1.write(new_message, 12);
+  }
 }
 
 //NEEDS TO BE CHECKED
@@ -244,14 +259,15 @@ void calibrationGain(){
   char print_buf[200];
   byte tx_buf[frame_size];
   uint8_t i2c_broadcast_addr = 0x00;
-  String aux;
+  char aux[3];
 
   // calculte the gains matrix (k)
   for(int i = 1; i <= MAX_IDS; i++){
     aux[0] = '!';
     aux[1] = 48 + i;
-    my_i2c_msg tx_msg{ i2c_address, millis(), 0,aux };
-  
+    my_i2c_msg tx_msg{ i2c_address, millis(), 0 };
+    strcpy(tx_msg.cmd,  aux);
+
     memcpy(tx_buf, &tx_msg, msg_size);
 
     masterTransmission(0b0001111 + i, tx_buf);
