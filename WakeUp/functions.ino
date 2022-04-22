@@ -124,7 +124,7 @@ void calibrateOwnGain(int crossedId){
   delay(500);
     
   // gain computation
-  k[crossedId - 1] = (y1 - y0) / (x1 - x0);
+  k[ID - 1] = y1 / x1 ;
 }
 
 void calibrateCrossGain(int crossedId){
@@ -132,7 +132,8 @@ void calibrateCrossGain(int crossedId){
   int x1 = ANALOG_MAX;
   float y0, y1, G;
   Serial.print(crossedId); Serial.print(" ");
-  Serial.println("ENTREI NOS GANHOS");
+  Serial.print("ENTREI NOS GANHOS ");
+  Serial.println(micros());
   
   // turns LED on to max intensity
   delay(500);
@@ -152,7 +153,7 @@ void calibrateCrossGain(int crossedId){
   delay(500);
     
   // gain computation
-  k[crossedId - 1] = (y1 - y0) / (x1 - x0);
+  k[crossedId - 1] = y1 / x1 ;
 }
 
 // When Slave sends data do this
@@ -200,22 +201,19 @@ void recv(int len) {
   switch (msg.cmd[0]){
     case '!': // calibration call
         Serial.println(msg.cmd);
-        if(msg.cmd[1] == (char) (48 + ID) ){
+        if(msg.cmd[1] == 48 + ID ){
             calibrateOwnGain( msg.cmd[1] - 48);
         }
         else{
             calibrateCrossGain(  msg.cmd[1] - 48 );
         }
-          Serial.println("DENTRO DO REV");
-          Serial.print(k[0], 6); Serial.print(" ");
-          Serial.print(k[1], 6); Serial.print(" ");
-          Serial.println(k[2], 6);
       break;
     case '?':
       Serial.println("STARTING THE HUB");
       break;  
     default:
-      Serial.println(msg.cmd[1]);
+      Serial.print("READ ");
+      Serial.println(msg.cmd);
       Serial.println("ERROR ON RECEIVING CALL, COMMAND NOT FOUND");
       break;
   }  

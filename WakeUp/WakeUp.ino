@@ -1,7 +1,7 @@
 #include <Wire.h>
 #include <hardware/flash.h>
 
-#define ID 3 // Change depending on the control node (1, 2 or 3)
+#define ID 2 // Change depending on the control node (1, 2 or 3)
 const int NUMBER_OF_RPI = 3;
 
 // I2C Message Structure
@@ -121,7 +121,7 @@ void setup() {
   memcpy(tx_buf, &tx_msg, msg_size);
   i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);
   
-
+  /*
   Serial.println("COMECEI REQUESTS");
   if(ID == 3){
 
@@ -140,6 +140,7 @@ void setup() {
     //memcpy(k[1], message_requested, 12);
     Serial.println("READ SECOND K");
   }
+  */
   
   Serial.println("STARTING GAINS");
 
