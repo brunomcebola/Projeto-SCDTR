@@ -124,7 +124,7 @@ void calibrateOwnGain(int crossedId){
   delay(500);
     
   // gain computation
-  k[ID - 1] = y1 / x1 ;
+  gains[ID - 1] = y1 / x1 ;
 }
 
 void calibrateCrossGain(int crossedId){
@@ -153,7 +153,7 @@ void calibrateCrossGain(int crossedId){
   delay(500);
     
   // gain computation
-  k[crossedId - 1] = y1 / x1 ;
+  gains[crossedId - 1] = y1 / x1 ;
 }
 
 // When Slave sends data do this
@@ -163,79 +163,78 @@ void recv(int len) {
   byte rx_buf[frame_size]={0};
   my_i2c_msg msg;
 
-  n_available_bytes = Wire.available();
+  n_available_bytes = Wire1.available();
   if(n_available_bytes != len){
     // Do Something for Debug...
-    if(len > frame_size) {
+  }
+  
+  for (i = 0; i < len; i++) rx_buf[i] = Wire1.read();
+  
+  if(len > frame_size) {
     for (i = frame_size; i < len; i++) Wire1.read(); // Flush
     n_frame_errors_overrun++;
     error_frame_size = len;
-    }
-    
-    if(len < frame_size) {
-        n_frame_errors_underrun++;
-        error_frame_size = len;
-    }
   }
   
-  //storing msg recieved in the input_fifo
-  for (i = 0; i < len; i++) rx_buf[i] = Wire1.read();
+  if(len < frame_size) {
+    n_frame_errors_underrun++;
+    error_frame_size = len;
+  }
   
   memcpy(&msg, rx_buf, msg_size);
   
-  for(i = 0; i < input_fifo_size; i++){
-    if(!input_slot_full[i]){
-      input_slot_full[i] = true;
-      input_fifo[i].node = msg.node;
-      input_fifo[i].ts = msg.ts;
-      input_fifo[i].value = msg.value;
-      input_fifo[i].cmd[0] = msg.cmd[0];
-      input_fifo[i].cmd[1] = msg.cmd[1];
-      input_fifo[i].cmd[2] = msg.cmd[2];
+  Serial.print("SOMETHING ");
+  Serial.print(msg.command); Serial.print(" ");
+  Serial.println(msg.value);
+
+  switch(msg.command){ // Process Information
+    
+    case '@': // Received Address
+      i2c_all_addresses[msg.value-1] = msg.node;
       break;
-    }
-  }
-
-  if( i == input_fifo_size ) n_overflows++;
-
-  switch (msg.cmd[0]){
+      
     case '!': // calibration call
-        Serial.println(msg.cmd);
-        if(msg.cmd[1] == 48 + ID ){
-            calibrateOwnGain( msg.cmd[1] - 48);
+        if(msg.value == ID ){
+            calibrateOwnGain( msg.value);
         }
         else{
-            calibrateCrossGain(  msg.cmd[1] - 48 );
+            calibrateCrossGain(  msg.value );
+        }
+        if(msg.value == 3){
+          Serial.println("K VALUES");
+          Serial.print(gains[0], 6); Serial.print(" ");
+          Serial.print(gains[1], 6); Serial.print(" ");
+          Serial.println(gains[2], 6);
         }
       break;
-    case '?':
-      Serial.println("STARTING THE HUB");
-      break;  
-    default:
-      Serial.print("READ ");
-      Serial.println(msg.cmd);
-      Serial.println("ERROR ON RECEIVING CALL, COMMAND NOT FOUND");
+      
+    case '-': // Ask to Broadcast ID    
+      if(msg.value == ID) send_id(0x00); // Broasdcast my ID
       break;
-  }  
+      
+    default:
+      Serial.println("err");
+      break;
+       
+  }
+  
 }
 
 // When Master requested data do this
 void req(void){
-  byte * px = (byte*) &k[0];
-  byte new_message[12];
-  Serial.println("ENTREI NO REQUEST");
-  if(ID == 1){
-    delay(2);
-    Serial.println("ENVIEI K 1 ");
-    memcpy(new_message, px , 4);
-    Wire1.write(new_message, 4);
-  }
-  else if(ID == 2){
-    delay(2);
-    Serial.println("ENVIEI K 2 ");
-    memcpy(new_message, k , 12);
-    Wire1.write(new_message, 12);
-  }
+
+  Serial.println("Here!");
+
+  char print_buf[200];
+  byte tx_buf[frame_size];
+  uint8_t i2c_broadcast_addr = 0x00;
+
+  my_i2c_msg tx_msg{ i2c_address, millis(), 0};
+  
+  memcpy(tx_buf, &tx_msg, msg_size);
+  
+  Wire1.write(tx_buf, frame_size);
+  
 }
 
 //NEEDS TO BE CHECKED
@@ -254,6 +253,7 @@ int slaveTransmission(uint8_t transmission_addr, byte message[]){
 }
 
 void calibrationGain(){
+  /*
   char print_buf[200];
   byte tx_buf[frame_size];
   uint8_t i2c_broadcast_addr = 0x00;
@@ -272,5 +272,63 @@ void calibrationGain(){
     delay(2500); // wait seconds, that represent the ammount of time needed for calibration
   }
   // request the vectors for the gains matrix (k)
+  */
+}
 
+// Confirm validity of the node I2C address
+bool i2c_validate_addr(uint8_t id){
+
+  bool flag = true;
+  if((id == 0b0001000) || (id == 0b0001100) || (id == 0b1100001)) flag = false;
+  else if((id >= 0b0000000) && (id <= 0b0000111)) flag = false;
+  else if((id >= 0b1110000) && (id <= 0b1111111)) flag = false;
+  return flag;
+  
+}
+
+// Wake Up and Define Node Address
+uint8_t wake_up(void){
+
+  uint8_t addr = 0b0001111;
+  int k=0;
+
+  // Address range: 16 - 111
+  do{
+    
+    addr++;
+    //if(i2c_validate_addr(addr) == false) continue;
+    k++;
+    
+    do{
+      Wire.beginTransmission(addr);
+      i2c_error_code = Wire.endTransmission(); 
+      delay(1);
+    }while(i2c_error_code == 4); // Make sure that it can talk
+
+    
+  }while((i2c_error_code == 0) && (addr < 0b1110000));
+  // Once an open address is found, use that address
+
+  ID = k;
+  return addr;
+  
+}
+
+// Broadcast my ID
+void send_id(uint8_t send_addr){
+
+  byte tx_buf[frame_size];
+
+  my_i2c_msg tx_msg = { i2c_address, millis(), (uint16_t) ID, '@'};
+  
+  memcpy(tx_buf, &tx_msg, msg_size);
+
+  Wire.beginTransmission(send_addr);
+  Wire.write(tx_buf, frame_size);
+  i2c_error_code = Wire.endTransmission();
+
+  if(i2c_error_code != 0) n_i2c_errors++;
+  
+  i2c_all_addresses[ID-1] = i2c_address;
+  
 }
