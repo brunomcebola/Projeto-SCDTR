@@ -126,18 +126,20 @@ void loop() {
       
     }
   }
-  
-  delay(500);
-  Serial.println("--------------------------------------------------------------"); 
-  Serial.print("My Address: "); Serial.print(i2c_address, BIN);
-  Serial.print("\t My ID: "); Serial.print(ID);
-  Serial.print("\t My STATE: "); Serial.println(STATE); 
-  Serial.println("--------------------------------------------------------------"); 
-  for(i = 0; i < NUMBER_OF_RPI; i++){
-    Serial.print("Address: "); Serial.print(i2c_all_addresses[i], BIN);
-    Serial.print("\tID: "); Serial.println(i+1); 
+
+  if(STATE == 0){
+    delay(500);
+    Serial.println("--------------------------------------------------------------"); 
+    Serial.print("My Address: "); Serial.print(i2c_address, BIN);
+    Serial.print("\t My ID: "); Serial.print(ID);
+    Serial.print("\t My STATE: "); Serial.println(STATE); 
+    Serial.println("--------------------------------------------------------------"); 
+    for(i = 0; i < NUMBER_OF_RPI; i++){
+      Serial.print("Address: "); Serial.print(i2c_all_addresses[i], BIN);
+      Serial.print("\tID: "); Serial.println(i+1); 
+    }
+    Serial.println("--------------------------------------------------------------"); 
   }
-  Serial.println("--------------------------------------------------------------"); 
   delay(1000);
   
 }
