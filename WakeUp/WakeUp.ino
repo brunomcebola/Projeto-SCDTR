@@ -1,12 +1,14 @@
 #include <Wire.h>
 #include <hardware/flash.h>
 
-int ID = 0; // Change depending on the control node (1, 2 or 3)
+int ID;
 const int NUMBER_OF_RPI = 3;
 int STATE = 1; // Wake Up State
 bool HUB_FLAG = false;
 /*
- * Describe State values Here
+ * 0 - Idle
+ * 1 - Start/Restart
+ * 2 - Calibrate
  */
 
 // I2C Message Structure
@@ -45,10 +47,10 @@ void setup() {
   delay(random(1000,2000));
   
 
-  Wire.setSDA(12);  // (1,2) - PIN 12 | (3) - PIN 20
-  Wire.setSCL(13);  // (1,2) - PIN 13 | (3) - PIN 21
-  Wire1.setSDA(10); // (1,2) - PIN 10 | (3) - PIN 18
-  Wire1.setSCL(11); // (1,2) - PIN 11 | (3) - PIN 19
+  Wire.setSDA(12);
+  Wire.setSCL(13);
+  Wire1.setSDA(10);
+  Wire1.setSCL(11);
   
   
   Wire.setClock(100000);
@@ -59,10 +61,12 @@ void setup() {
   Wire1.begin(i2c_address); // Initiate as Slave
   Wire1.onReceive(recv);
   Wire1.onRequest(req);
+ 
+}
 
+void loop() {
 
-  delay(5000);
-  // put your main code here, to run repeatedly:
+   // put your main code here, to run repeatedly:
   int i;
   bool finish_flag;
   byte tx_buf[frame_size];
@@ -94,42 +98,48 @@ void setup() {
   }
 
   if(HUB_FLAG == true){
-    // Act as HUB
+    switch(STATE){
+
+      case 2:
+        //Serial.println("STARTING OBTAINING GAINS");
+        tx_msg = { i2c_address, millis(), (uint16_t) 1, '!'};
+        memcpy(tx_buf, &tx_msg, msg_size);
+        i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);
+        delay(100);
+        tx_msg = { i2c_address, millis(), (uint16_t) 2, '!'};
+        memcpy(tx_buf, &tx_msg, msg_size);
+        i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);
+        delay(100);
+        tx_msg = { i2c_address, millis(), (uint16_t) 3, '!'};
+        memcpy(tx_buf, &tx_msg, msg_size);
+        i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);  
+        Serial.println("STARTING GAINS");
+        Serial.print(gains[0], 6); Serial.print(" ");
+        Serial.print(gains[1], 6); Serial.print(" ");
+        Serial.println(gains[2], 6);
+        STATE = 0; // Idle   
+        break;
+        
+     default:
+        STATE = 0; // Idle  
+        break;
+      
+    }
   }
-  delay(500);
-  Serial.println("--------------------------------------------------"); 
-  Serial.print("My Address: "); Serial.print(i2c_address, BIN);
-  Serial.print("\t My ID: "); Serial.print(ID);
-  Serial.print("\t My STATE: "); Serial.println(STATE); 
-  Serial.println("--------------------------------------------------"); 
-  for(i = 0; i < NUMBER_OF_RPI; i++){
-    Serial.print("Address: "); Serial.print(i2c_all_addresses[i], BIN);
-    Serial.print("\tID: "); Serial.println(i+1); 
+
+  if(STATE == 0){
+    delay(500);
+    Serial.println("--------------------------------------------------------------"); 
+    Serial.print("My Address: "); Serial.print(i2c_address, BIN);
+    Serial.print("\t My ID: "); Serial.print(ID);
+    Serial.print("\t My STATE: "); Serial.println(STATE); 
+    Serial.println("--------------------------------------------------------------"); 
+    for(i = 0; i < NUMBER_OF_RPI; i++){
+      Serial.print("Address: "); Serial.print(i2c_all_addresses[i], BIN);
+      Serial.print("\tID: "); Serial.println(i+1); 
+    }
+    Serial.println("--------------------------------------------------------------"); 
   }
-  Serial.println("--------------------------------------------------");
   delay(1000);
-  Serial.println("STARTING OBTAINING GAINS");
-  
-  if(ID == 3){
-    tx_msg = { i2c_address, millis(), (uint16_t) 1, '!'};
-    memcpy(tx_buf, &tx_msg, msg_size);
-    i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);
-    delay(100);
-    tx_msg = { i2c_address, millis(), (uint16_t) 2, '!'};
-    memcpy(tx_buf, &tx_msg, msg_size);
-    i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);
-    delay(100);
-    tx_msg = { i2c_address, millis(), (uint16_t) 3, '!'};
-    memcpy(tx_buf, &tx_msg, msg_size);
-    i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);  
-  }
-  Serial.println("STARTING GAINS");
-
-  Serial.print(gains[0], 6); Serial.print(" ");
-  Serial.print(gains[1], 6); Serial.print(" ");
-  Serial.println(gains[2], 6);
-}
-
-void loop() {
   
 }
