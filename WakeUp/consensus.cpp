@@ -31,8 +31,8 @@ float cost{0};
 float d[2]{0.0,0.0};
 
 //case 1
-float L1 = 150, L2 = 80;
-float o1 = 30, o2 = 0;
+float L1 = 80, L2 = 150;
+float o1 = 50, o2 = 50;
 float c1 = 1, c2=1;
 float rho =0.07;
 int maxiter = 50;
@@ -44,17 +44,17 @@ float L[2]{L1,L2};
 float o[2]{o1,o2}; 
 
 //check if it is going well
-float d11[50];
-float d12[50];
-float d21[50];
-float d22[50];
+float d11[50]{0};
+float d12[50]{0};
+float d21[50]{0};
+float d22[50]{0};
 
-float av1[50];
-float av2[50];
+float av1[50]{0};
+float av2[50]{0};
 
 bool check_feasibility(consensus_node *node,float d[]);
 float evaluate_cost(consensus_node *node, float d[], float rho);
-void consensus_iterate(consensus_node *node, float rho);
+void consensus_iterate(consensus_node *node, float rho, float iter);
 
 float vec_1_by_2_mult(float vec1[], float vec2[]){
     return vec1[0]*vec2[0] + vec1[1]*vec2[1];
@@ -102,16 +102,16 @@ int main(){
     node2.o = o2;
     node2.L = L2;
 
-    for(int i = 0; i < maxiter; i++){
-        consensus_iterate(&node1, 0.001);
-        consensus_iterate(&node2, 0.001);
-
+    for(int i = 1; i < maxiter; i++){
+        consensus_iterate(&node1, 0.07,i);
+        consensus_iterate(&node2, 0.07,i);
+        //cout << node1.d[0] << "  " << node1.d[1] <<endl;
         //change cuz of arrays;
         node1.d_av[0] = (node1.d[0] + node2.d[0])/2;
-        node1.d_av[1] = (node1.d[0] + node2.d[1])/2;
+        node1.d_av[1] = (node1.d[1] + node2.d[1])/2;
 
         node2.d_av[0] = (node1.d[0] + node2.d[0])/2;
-        node2.d_av[1] = (node1.d[0] + node2.d[1])/2;
+        node2.d_av[1] = (node1.d[1] + node2.d[1])/2;
 
         //change cuz of arrays
         node1.y[0] = node1.y[0] + rho*(node1.d[0]-node1.d_av[0]);
@@ -124,12 +124,20 @@ int main(){
         d12[i] = node1.d[1];
         d21[i] = node2.d[0];
         d22[i] = node2.d[1];
+
         av1[i] = (d11[i]+d21[i])/2;
         av2[i] = (d12[i]+d22[i])/2;
     }
-
-    cout << d[0] << endl;
-    cout << d[1] << endl;
+    /*
+    cout << "d11   d12" << endl;
+    for(int i = 0; i < 50; i++){
+      cout << d11[i] << " " << d12[i] <<endl;
+    }
+    */
+    cout << "OUTPUT" << endl;
+    cout << node1.d[0] << "  " << node1.d[1] << endl;
+    cout << node2.d[0] << "  " << node2.d[1] << endl;
+    cout << av1[49] << "  " << av2[49] << endl;
     cout << cost << endl;
 
     return 0;
@@ -137,13 +145,47 @@ int main(){
 
 bool check_feasibility(consensus_node *node,float d[]){
     float tol = 0.001; // tolerance for rounding errors;
+    bool check = true;
+    int number = 0;
 
-    if( d[(*node).index] < 0 - tol  ) return false;
-    if( d[(*node).index] > 100 + tol) return false;
+    //cout << "     " << d[0] * (*node).gain[0] + d[1] * (*node).gain[1] << endl << endl;
+    if( d[(*node).index] < 0 - tol  ){
+      check = false;
+      number = 1;
+      /*
+      cout << "     " << check  <<endl << endl;
+      cout << "     " << number  <<endl << endl;
+      */
+      return check;
+    } 
+    if( d[(*node).index] > 100 + tol) {
+      check = false;
+      number = 2;
+      /*
+      cout << "     " << check  <<endl << endl;
+      cout << "     " << number  <<endl << endl;
+      */
+      return check;
+    }
 
-    if( d[0] * (*node).gain[0] + d[1] * (*node).gain[1]< (*node).L - (*node).o -tol ) return false;
+    if( d[0] * (*node).gain[0] + d[1] * (*node).gain[1] < (*node).L - (*node).o - tol ){
+      check = false;
+      number = 3;
+      /*
+      cout << "     " << check  <<endl << endl;
+      cout << "     " << number  <<endl << endl;
+      */
+      return check;
+    }
+    /*
+    cout << "CHECK" << endl;
+    cout << d[0] << "  " << d[1] << "  " << (*node).index << endl;
+    */
+    
 
-    return true;
+    //cout << "     " << check  <<endl << endl;
+    //cout << "     " << number  <<endl << endl;
+    return check;
 }
 
 float evaluate_cost(consensus_node *node, float d[], float rho){
@@ -158,11 +200,11 @@ float evaluate_cost(consensus_node *node, float d[], float rho){
     aux[0] = d[0] - (*node).d_av[0];
     aux[1] = d[1] - (*node).d_av[1];
     cost = multiplication + ( (*node).y[0]*aux[0] + (*node).y[1]*aux[1] ) + (rho/2) * norm * norm;
-
+    //cout << "cost : " << cost << endl;
     return cost;
 }
 
-void consensus_iterate(consensus_node *node, float rho){
+void consensus_iterate(consensus_node *node, float rho, float iter){
     float d_best[2]{-1,-1};
     float cost_best{10000}; // large num
 
@@ -183,8 +225,8 @@ void consensus_iterate(consensus_node *node, float rho){
     float d_l0[2]; // minimum constrained to linear and 0 boundary
     float d_l1[2]; // minimum constrained to linear and 100 boundary
 
-    z[0] = rho*(*node).d_av[0] - (*node).y[0] - (*node).c[0];
-    z[1] = rho*(*node).d_av[1] - (*node).y[1] - (*node).c[1];
+    z[0] = (*node).d_av[0] * rho - (*node).y[0] - (*node).c[0];
+    z[1] = (*node).d_av[1] * rho - (*node).y[1] - (*node).c[1];
 
     // CONDITIONS START HERE!!!!
     float d_u[2];
@@ -210,6 +252,7 @@ void consensus_iterate(consensus_node *node, float rho){
     if(sol_boundary_linear){
       float cost_boundary_linear = evaluate_cost(node, d_bl, rho);
       if(cost_boundary_linear < cost_best){
+        
         cost_best = cost_boundary_linear;
         d_best[0] = d_bl[0];
         d_best[1] = d_bl[1];
@@ -219,6 +262,7 @@ void consensus_iterate(consensus_node *node, float rho){
     for(int i = 0; i < 2; i++) d_b0[i] = z[i]/rho;
     d_b0[(*node).index] = 0.0;
     // check feasibility of minimum constrained to 0 boundary
+    
     sol_boundary_0 = check_feasibility(node, d_b0);
     // compute cost and if best store new optimum
     if(sol_boundary_0){
@@ -231,7 +275,7 @@ void consensus_iterate(consensus_node *node, float rho){
     }
     // compute minimum constrained to 100 boundary
     for(int i = 0; i < 2; i++) d_b1[i] = z[i]/rho;
-    d_b1[(*node).index] = 0.0;
+    d_b1[(*node).index] = 100.0;
     // check feasibility of minimum constrained to 100 boundary
     sol_boundary_100 = check_feasibility(node, d_b1);
     // compute cost and if best store new optimum
@@ -243,12 +287,17 @@ void consensus_iterate(consensus_node *node, float rho){
         d_best[1] = d_b1[1];
       }
     }
+
+
+    //seems right
+
     // compute minimum constrained to linear and 0 boundary
     for(int i = 0; i < 2; i++){
-       d_l0[i] = z[i]/rho - ((*node).gain[i]/(*node).n)*((*node).o - (*node).L) + ((*node).gain[i]/(rho*(*node).m))*((*node).gain[(*node).index]*z[(*node).index] - vec_1_by_2_mult(z, (*node).gain));
+       d_l0[i] = z[i]/rho - ((*node).gain[i]/(*node).m)*((*node).o - (*node).L) + ((*node).gain[i]/(rho*(*node).m))*((*node).gain[(*node).index]*z[(*node).index] - vec_1_by_2_mult(z, (*node).gain));
     }
     d_l0[(*node).index] = 0.0;
     // check feasibility of minimum constrained to linear and 0 boundary
+    
     sol_linear_0 = check_feasibility(node, d_l0);
     // compute cost and if best store new optimum
     if(sol_linear_0){
@@ -259,9 +308,12 @@ void consensus_iterate(consensus_node *node, float rho){
         d_best[1] = d_l0[1];
       }
     }
+
+    //seems right
+
     // compute minimum constrained to linear and 100 boundary
     for(int i = 0; i < 2; i++){
-       d_l1[i] = z[i]/rho - ((*node).gain[i]/(*node).n)*((*node).o - (*node).L + 100*(*node).gain[(*node).index]) + ((*node).gain[i]/(rho*(*node).m))*((*node).gain[(*node).index]*z[(*node).index] - vec_1_by_2_mult(z, (*node).gain));
+       d_l1[i] = z[i]/rho - ((*node).gain[i]/(*node).m)*((*node).o - (*node).L + 100*(*node).gain[(*node).index]) + ((*node).gain[i]/(rho*(*node).m))*((*node).gain[(*node).index]*z[(*node).index] - vec_1_by_2_mult(z, (*node).gain));
     }
     d_l1[(*node).index] = 100.0;
     // check feasibility of minimum constrained to linear and 100 boundary
@@ -275,8 +327,18 @@ void consensus_iterate(consensus_node *node, float rho){
         d_best[1] = d_l1[1];
       }
     }
+
+    cout << "     :" << z[0]  <<endl ;
+    cout << "     :" << z[1]  <<endl << endl ;
+
+    cout << "     :" << (*node).y[0]  <<endl ;
+    cout << "     :" << (*node).y[1]  <<endl << endl ;
+
+    cout << "     :" << (*node).d_av[0]  <<endl ;
+    cout << "     :" << (*node).d_av[1]  <<endl << endl ;
+
     //need something here
-    d[0] = d_best[0];
-    d[1] = d_best[1];
+    (*node).d[0] = d_best[0];
+    (*node).d[1] = d_best[1];
     cost = cost_best;
 }
