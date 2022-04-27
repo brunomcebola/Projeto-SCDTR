@@ -163,6 +163,8 @@ void recv(int len) {
     byte rx_buf[frame_size] = {0};
     i2c_msg msg;
     int lum;
+    int i;
+    float f;
 
     n_available_bytes = Wire1.available();
     if (n_available_bytes != len) {
@@ -177,12 +179,15 @@ void recv(int len) {
 
     memcpy(&msg, rx_buf, msg_size);
 
-    switch (msg.cmd) {  // Process Information
-        case '@':       // Received Address
+    switch (msg.cmd) {
+        // Received Address
+        case '@': {
             i2c_addresses[msg.value_i - 1] = msg.node;
             break;
+        }
 
-        case '!':  // calibration call
+        // calibration call
+        case '!': {
             if (msg.value_i == ID) {
                 calibrateOwnGain(msg.value_i);
             } else {
@@ -197,101 +202,149 @@ void recv(int len) {
                 Serial.println(gains[2], 6);
             }
             break;
+        }
 
-        case '-':                                  // Ask to Broadcast ID
+        // Ask to Broadcast ID
+        case '-': {
             if (msg.value_i == ID) send_id(0x00);  // Broasdcast my ID
             break;
+        }
 
-            /* INTERFACE */
-
-        case 'a':
+        // Interface calls
+        case 'a': {
             set_anti_windup_state(msg.value_i);
             break;
+        }
 
-        case 'd':
+        case 'b': {
+            switch (msg.sub_cmd) {
+                case 'd':
+                    buffer_duty_cycle = !buffer_duty_cycle;
+                    buffer_lux = false;
+                    buffer_read_size = buffer.get_used_space();
+                    buffer_read_counter = 0;
+
+                    Serial.printf("b d %c ", lum);
+
+                    break;
+
+                case 'l':
+                    buffer_lux = !buffer_lux;
+                    buffer_duty_cycle = false;
+                    buffer_read_size = buffer.get_used_space();
+                    buffer_read_counter = 0;
+
+                    Serial.printf("b l %c ", lum);
+
+                    break;
+
+                default:
+                    set_feedback_state(msg.value_i);
+                    break;
+            }
+        }
+
+        case 'd': {
             set_instantaneous_duty_cycle(msg.value_f);
             break;
+        }
 
-        case 'o':
+        case 'o': {
             set_occupancy_state(msg.value_i);
             break;
+        }
 
-        case 'r':
+        case 'r': {
             set_lux_ref(msg.value_f);
             break;
+        }
 
-        case 'w':
+        case 'w': {
             set_feedforward_state(msg.value_i);
             break;
+        }
 
-        case 'g':
+        case 'g': {
             switch (msg.sub_cmd) {
                 case 'a':
-                    send_anti_windup_state();
+                case 'b':
+                case 'o':
+                case 'w': {
+                    send_int(msg.sub_cmd);
                     break;
+                }
 
                 case 'd':
-                    send_instantaneous_duty_cycle();
+                case 'e':
+                case 'f':
+                case 'l':
+                case 'p':
+                case 'r':
+                case 't':
+                case 'v':
+                case 'x': {
+                    send_float(msg.sub_cmd);
+                    break;
+                }
+            }
+            break;
+        }
+
+        case 's': {
+            switch (msg.sub_cmd) {
+                case 'd':
+                    stream_duty_cycle = !stream_duty_cycle;
+                    stream_lux = false;
                     break;
 
                 case 'l':
-                    send_measured_illuminance();
+                    stream_lux = !stream_lux;
+                    stream_duty_cycle = false;
                     break;
-
-                case 'o':
-                    send_occupancy_state();
-                    break;
-
-                case 'r':
-                    send_lux_ref();
-                    break;
-
-                case 't':
-                    send_elapsed_time();
-
-                case 'w':
-                    send_feedforward_state();
             }
-            break;
+        }
 
-        case '?':
+        // Interface responses
+        case '?': {
             lum = find_index(i2c_addresses, NUMBER_OF_RPI, msg.node);
+
             switch (msg.sub_cmd) {
                 case 'a':
-                    print_anti_windup_state();
+                case 'b':
+                case 'o':
+                case 'w': {
+                    print_int(msg.sub_cmd, lum, msg.value_i);
                     break;
+                }
 
                 case 'd':
-                    print_duty_cycle(lum, msg.value_f);
-                    break;
-
+                case 'e':
+                case 'f':
                 case 'l':
-                    print_measured_illuminance(lum, msg.value_f);
-                    break;
-
-                case 'o':
-                    print_occupancy_state(lum, msg.value_i);
-                    break;
-
+                case 'p':
                 case 'r':
-                    print_lux_ref(lum, msg.value_f);
-                    break;
-
                 case 't':
-                    print_elapsed_time(lum, msg.value_f);
+                case 'v':
+                case 'x': {
+                    print_float(msg.sub_cmd, lum, msg.value_f);
                     break;
-
-                case 'w':
-                    print_feedforward_state(lum, msg.value_i);
-                    break;
+                }
             }
             break;
+        }
 
-            /* INTERFACE */
-
-        default:
-            Serial.println("err");
+        // Stream
+        case '*': {
+            lum = find_index(i2c_addresses, NUMBER_OF_RPI, msg.node);
+            print_stream(msg.sub_cmd, lum, msg.value_f, msg.t);
             break;
+        }
+
+        // Buffer
+        case '$': {
+            lum = find_index(i2c_addresses, NUMBER_OF_RPI, msg.node);
+            print_buffer(msg.sub_cmd, lum, msg.value_i, msg.value_f);
+        }
     }
 }
 
@@ -318,30 +371,6 @@ int masterTransmission(uint8_t transmission_addr, byte message[]) {
 int slaveTransmission(uint8_t transmission_addr, byte message[]) {
     Wire1.write(message, 12);  // ID - 1, because id starts in 1
     return Wire1.endTransmission();
-}
-
-void calibrationGain() {
-    /*
-    char print_buf[200];
-    byte tx_buf[frame_size];
-    uint8_t i2c_broadcast_addr = 0x00;
-    char aux[3];
-
-    // calculte the gains matrix (k)
-    for(int i = 1; i <= MAX_IDS; i++){
-      aux[0] = '!';
-      aux[1] = 48 + i;
-      i2c_msg tx_msg{ i2c_address, millis(), 0 };
-      strcpy(tx_msg.cmd,  aux);
-
-      memcpy(tx_buf, &tx_msg, msg_size);
-
-      masterTransmission(0b0001111 + i, tx_buf);
-      delay(2500); // wait seconds, that represent the ammount of time needed
-    for calibration
-    }
-    // request the vectors for the gains matrix (k)
-    */
 }
 
 // Confirm validity of the node I2C address
@@ -404,17 +433,6 @@ void set_instantaneous_duty_cycle(float dc) {
     analogWrite(LED_PIN, duty_cycle * ANALOG_MAX);
 }
 
-void send_instantaneous_duty_cycle() {
-    byte tx_buf[frame_size];
-    i2c_msg tx_msg = {i2c_address, '?', 'd', 0, controller.get_u() / V_REF};
-    memcpy(tx_buf, &tx_msg, msg_size);
-    masterTransmission(i2c_addresses[2], tx_buf);
-}
-
-void print_duty_cycle(int lum, float dc) {
-    Serial.printf("d %d %f\n", lum, dc);
-}
-
 // lux ref
 void set_lux_ref(float lux_ref) {
     controller.set_lux_ref(lux_ref);
@@ -424,83 +442,128 @@ void set_lux_ref(float lux_ref) {
         lux_to_n(controller.get_lux_ref(), simulator.get_gain()));
 }
 
-void send_lux_ref() {
-    byte tx_buf[frame_size];
-    i2c_msg tx_msg = {i2c_address, '?', 'r', 0, controller.get_lux_ref()};
-    memcpy(tx_buf, &tx_msg, msg_size);
-    masterTransmission(i2c_addresses[2], tx_buf);
-}
-
-void print_lux_ref(int lum, float lux_ref) {
-    Serial.printf("r %d %f\n", lum, lux_ref);
-}
-
 // occupancy state
 void set_occupancy_state(bool state) { controller.set_occupancy(state); }
-
-void send_occupancy_state() {
-    byte tx_buf[frame_size];
-    i2c_msg tx_msg = {i2c_address, '?', 'o', controller.get_occupancy(), 0.0f};
-    memcpy(tx_buf, &tx_msg, msg_size);
-    masterTransmission(i2c_addresses[2], tx_buf);
-}
-
-void print_occupancy_state(int lum, int state) {
-    Serial.printf("o %d %d\n", lum, state);
-}
 
 // anti windup
 void set_anti_windup_state(bool state) {
     controller.set_anti_wind_up_usage(state);
 }
 
-void send_anti_windup_state() {
-    byte tx_buf[frame_size];
-    i2c_msg tx_msg = {i2c_address, '?', 'a',
-                      controller.get_anti_wind_up_usage(), 0.0f};
-    memcpy(tx_buf, &tx_msg, msg_size);
-    masterTransmission(i2c_addresses[2], tx_buf);
-}
-
-void print_anti_windup_state(int lum, int state) {
-    Serial.printf("a %d %d\n", lum, state);
-}
-
 // feedforward
 void set_feedforward_state(bool state) { controller.set_ff_usage(state); }
 
-void send_feedforward_state() {
+// feedback
+void set_feedback_state(bool state) { controller.set_fb_usage(state); }
+
+// send responses
+void send_float(char sub_cmd, float val) {
+    float val;
+
+    switch (sub_cmd) {
+        case 'd': {
+            val = controller.get_u() / V_REF;
+            break;
+        }
+        case 'e': {
+            val = total_energy;
+            break;
+        }
+        case 'f': {
+            val = flicker_error / (iteration_counter - 2);
+            break;
+        }
+        case 'l': {
+            val = ldr_volt_to_lux(n_to_volt(analogRead(A0)), M, B);
+            break;
+        }
+        case 'p': {
+            val = ((controller.get_u() / V_REF) * NOMINAL_POWER);
+            break;
+        }
+        case 'r': {
+            val = controller.get_lux_ref();
+            break;
+        }
+        case 't': {
+            val = micros() * pow(10, -6);
+            break;
+        }
+        case 'v': {
+            val = visibility_error / iteration_counter;
+            break;
+        }
+        case 'x': {
+            val = ldr_volt_to_lux(n_to_volt(analogRead(A0)), M, B) -
+                  n_to_lux(volt_to_n(controller.get_u()), simulator.get_gain());
+            break;
+        }
+    }
+
     byte tx_buf[frame_size];
-    i2c_msg tx_msg = {i2c_address, '?', 'w', controller.get_ff_usage(), 0.0f};
+    i2c_msg tx_msg = {i2c_address, '?', sub_cmd, 0, val};
     memcpy(tx_buf, &tx_msg, msg_size);
     masterTransmission(i2c_addresses[2], tx_buf);
 }
 
-void print_feedforward_state(int lum, int state) {
-    Serial.printf("w %d %d\n", lum, state);
-}
+void send_int(char sub_cmd) {
+    int val;
 
-// measured illuminance
-void send_measured_illuminance() {
+    switch (sub_cmd) {
+        case 'a': {
+            val = controller.get_anti_wind_up_usage();
+            break;
+        }
+        case 'b': {
+            val = controller.get_fb_usage();
+            break;
+        }
+        case 'o': {
+            val = controller.get_occupancy();
+            break;
+        }
+        case 'w': {
+            val = controller.get_ff_usage();
+            break;
+        }
+    }
+
     byte tx_buf[frame_size];
-    i2c_msg tx_msg = {i2c_address, '?', 'w', 0,
-                      ldr_volt_to_lux(n_to_volt(analogRead(A0)), M, B)};
+    i2c_msg tx_msg = {i2c_address, '?', sub_cmd, val, 0.0f};
     memcpy(tx_buf, &tx_msg, msg_size);
     masterTransmission(i2c_addresses[2], tx_buf);
 }
 
-void print_measured_illuminance(int lum, float lux) {
-    Serial.printf("l %d %f\n", lum, lux);
-}
-
-// elapsed time
-void send_elapsed_time() {
+void send_stream(char sub_cmd, float val) {
     byte tx_buf[frame_size];
-    i2c_msg tx_msg = {i2c_address, '?', 'w', 0, micros() * pow(10, -6)};
+    i2c_msg tx_msg = {i2c_address, '*', sub_cmd, 0, val};
     memcpy(tx_buf, &tx_msg, msg_size);
     masterTransmission(i2c_addresses[2], tx_buf);
 }
 
-void print_elapsed_time(int lum, float t) {
-    Serial.printf("t %d %.2f\n", lum, t);
+void send_buffer(char sub_cmd, float val, int iter) {
+    byte tx_buf[frame_size];
+    i2c_msg tx_msg = {i2c_address, '$', sub_cmd, iter, val};
+    memcpy(tx_buf, &tx_msg, msg_size);
+    masterTransmission(i2c_addresses[2], tx_buf);
+}
+
+// print responses
+void print_int(char cmd, int lum, int val) {
+    Serial.printf("%c %d %d\n", cmd, lum, val);
+}
+
+void print_float(char cmd, int lum, float val) {
+    Serial.printf("%c %d %f\n", cmd, lum, val);
+}
+
+void print_stream(char sub_cmd, int lum, float val, int t) {
+    Serial.printf("s %c %d %f %d\n", sub_cmd, lum, val, t);
+}
+
+void print_buffer(char sub_cmd, int lum, int iter, float val) {
+    if (iter == 0) {
+        Serial.printf("b %c %c ", sub_cmd, lum);
+    }
+    Serial.printf("%f, ", val);
 }

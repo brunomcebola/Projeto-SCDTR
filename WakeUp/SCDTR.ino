@@ -20,9 +20,6 @@ float u_cont = 0;
 
 char lum = '\0';
 
-
-
-
 float duty_cycle = 0.0f;
 float lux = 0;
 bool stream_duty_cycle = false;
@@ -126,12 +123,11 @@ void loop1() {
 
     // stream duty cycle
     if (stream_duty_cycle) {
-        Serial.printf("s d %c %f %d\n", lum, duty_cycle, millis());
+        send_stream('d', duty_cycle);
     }
-
     // stream lux
-    if (stream_lux) {
-        Serial.printf("s l %c %f %d\n", lum, lux, millis());
+    else if (stream_lux) {
+        send_stream('l', lux);
     }
 
     // read buffer
@@ -144,12 +140,13 @@ void loop1() {
         for (int i = 0; i < t; i++) {
             data = buffer.remove_oldest();
 
+            // buffer duty cycle
             if (buffer_duty_cycle) {
-                Serial.printf("%f, ", data.duty_cycle);
+                send_buffer('d', data.duty_cycle, buffer_read_counter);
             }
-
-            if (buffer_lux) {
-                Serial.printf("%f, ", data.lux);
+            // buffer lux
+            else if (buffer_lux) {
+                send_buffer('l', data.lux, buffer_read_counter);
             }
 
             buffer_read_counter++;
