@@ -1,8 +1,9 @@
 #include <Wire.h>
 #include <hardware/flash.h>
+#include "consensus.h"
 
 int ID;
-const int NUMBER_OF_RPI = 3;
+const int NUMBER_OF_RPI = N_RPI;
 int STATE = 1; // Wake Up State
 bool HUB_FLAG = false;
 /*

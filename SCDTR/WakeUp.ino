@@ -1,3 +1,4 @@
+/*
 #include <Wire.h>
 #include <hardware/flash.h>
 
@@ -5,11 +6,6 @@ int ID;
 const int NUMBER_OF_RPI = 3;
 int STATE = 1; // Wake Up State
 bool HUB_FLAG = false;
-/*
- * 0 - Idle
- * 1 - Start/Restart
- * 2 - Calibrate
- */
 
 // I2C Message Structure
 struct my_i2c_msg {
@@ -141,3 +137,4 @@ void loop() {
   delay(1000);
   
 }
+*/

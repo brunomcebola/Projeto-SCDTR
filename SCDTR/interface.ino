@@ -1,10 +1,6 @@
+/*
 template <class T>
 T read_number(int sel) {
-    /*
-    SEL:
-        0 -> int
-        1 -> float
-    */
 
     String input = "";
 
@@ -364,3 +360,4 @@ void interface() {
         }
     }
 }
+*/
