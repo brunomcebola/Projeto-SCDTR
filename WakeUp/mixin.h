@@ -10,5 +10,6 @@ float lux_to_volt(float lux, float G);
 float get_ldr_resistance_from_v(float v, float m, float b);
 float get_ldr_resistance_from_lux(float lux, float m, float b);
 float get_tau_for_n(int n);
+int find_index(uint8_t arr[], int len, uint8_t v);
 
 #endif

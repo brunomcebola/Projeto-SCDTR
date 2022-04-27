@@ -19,10 +19,10 @@ float u_real = 0;
 float u_cont = 0;
 
 char lum = '\0';
-char cmd = '\0';
-char sub_cmd = '\0';
-int val_i = 0;
-float val_f = 0.0f;
+
+
+
+
 float duty_cycle = 0.0f;
 float lux = 0;
 bool stream_duty_cycle = false;
@@ -41,8 +41,7 @@ float flicker_error = 0.0f;
 float prev_lux_1 = 0.0f;
 float prev_lux_2 = 0.0f;
 
-/*
-void setup() {
+void setup1() {
     float G;
 
     Serial.begin(115200);
@@ -69,13 +68,10 @@ void setup() {
 
 // loop function
 
-void loop() {
+void loop1() {
     initial_time = micros();
 
     iteration_counter++;
-
-    // interface to receive comands from the computer
-    interface();
 
     // simulate the sytem respose
     u_sim = simulator.simulate(micros());
@@ -172,4 +168,3 @@ void loop() {
     final_time = micros();
     delay(sampling_time - ((final_time - initial_time) * pow(10, -3)));
 }
-*/

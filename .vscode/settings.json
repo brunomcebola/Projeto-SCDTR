@@ -2,5 +2,10 @@
     "files.associations": {
         "thread": "cpp"
     },
-    "C_Cpp.errorSquiggles": "Disabled"
+    "C_Cpp.errorSquiggles": "Disabled",
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#5A0144",
+        "titleBar.activeBackground": "#7F025F",
+        "titleBar.activeForeground": "#FFF9FD"
+    }
 }
