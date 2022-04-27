@@ -1,175 +1,144 @@
+#include <Wire.h>
+#include <hardware/flash.h>
+
+int ID;
+const int NUMBER_OF_RPI = 3;
+int STATE = 1; // Wake Up State
+bool HUB_FLAG = false;
 /*
-#include "circular_buffer.h"
-#include "constants.h"
-#include "controller.h"
-#include "mixin.h"
-#include "simulator.h"
+ * 0 - Idle
+ * 1 - Start/Restart
+ * 2 - Calibrate
+ */
 
-const int sampling_time = 10;  // ms
+// I2C Message Structure
+struct my_i2c_msg {
+  uint8_t node; //source node
+  uint32_t ts; //sample time in ms
+  uint16_t value; //sample value
+  char command; //command specification
+  my_i2c_msg(uint8_t n = 0, uint32_t t = 0, uint16_t v = 0, char c = 'i')
+  : node{n}, ts{t}, value{v}, command{c} {}
+};
 
-Simulator simulator;
-Controller controller;
-CircularBuffer<6000> buffer;
-buffer_data data;
+// Basic I2C Communication Variables
+const int msg_size = sizeof(my_i2c_msg);
+const int frame_size = msg_size + 1; //sometimes the byte is lost in the comms, so we send and extra dummy one
+const int input_fifo_size = 32; //reserves 32 slots - increase if more are needed
+volatile my_i2c_msg input_fifo[input_fifo_size];
+volatile bool input_slot_full[input_fifo_size] {false};
+volatile int n_frame_errors_underrun = 0;
+volatile int n_frame_errors_overrun = 0;
+volatile int n_overflows = 0;
+volatile int error_frame_size;
+int i2c_error_code = 0;            
+int n_i2c_errors = 0;
+uint8_t this_pico_id[8];
+uint8_t i2c_address;
 
-long int initial_time = 0;
-long int final_time = 0;
-
-float u_sim = 0;
-float u_real = 0;
-float u_cont = 0;
-
-char lum = '\0';
-char cmd = '\0';
-char sub_cmd = '\0';
-int val_i = 0;
-float val_f = 0.0f;
-float duty_cycle = 0.0f;
-float lux = 0;
-bool stream_duty_cycle = false;
-bool stream_lux = false;
-bool buffer_duty_cycle = false;
-bool buffer_lux = false;
-int buffer_read_size = 0;
-int buffer_read_counter = 0;
-
-int iteration_counter = 0;
-float flicker = 0.0f;
-
-float total_energy = 0.0f;
-float visibility_error = 0.0f;
-float flicker_error = 0.0f;
-float prev_lux_1 = 0.0f;
-float prev_lux_2 = 0.0f;
+// More I2C and System variables
+float gains[3]{1,1,1};
+uint8_t i2c_all_addresses[NUMBER_OF_RPI] = {0};
 
 void setup() {
-    float G;
-
-    Serial.begin(115200);
-    analogReadResolution(12);      // default is 10
-    analogWriteFreq(ANALOG_FREQ);  // 60KHz, about max
-    analogWriteRange(ANALOG_MAX);  // 100% duty cycle
-
-    delay(5000);
-
-    G = calibrate_gain();
-
-    delay(1000);
-
-    controller.set_controller(sampling_time * pow(10, -3), 1.75, 5);
-
-    simulator.set_simulator(M, B, G);
-
-    controller.set_lux_ref(25);
-
-    simulator.set_simualtion(
-        micros(), analogRead(A0),
-        lux_to_n(controller.get_lux_ref(), simulator.get_gain()));
+  
+  delay(10000);
+  Serial.begin(115200);
+  randomSeed(analogRead(A1));
+  delay(random(1000,2000));
+  
+  Wire.setSDA(12);
+  Wire.setSCL(13);
+  Wire1.setSDA(10);
+  Wire1.setSCL(11);
+  
+  Wire.setClock(100000);
+  Wire.begin(); // Initiate as Master
+  i2c_address = wake_up(); // Define my Address
+  send_id(0x00); // Broasdcast my ID
+  Wire1.setClock(100000);
+  Wire1.begin(i2c_address); // Initiate as Slave
+  Wire1.onReceive(recv);
+  Wire1.onRequest(req);
+ 
 }
-
-// loop function
 
 void loop() {
-    initial_time = micros();
 
-    iteration_counter++;
+   // put your main code here, to run repeatedly:
+  int i;
+  bool finish_flag;
+  byte tx_buf[frame_size];
+  uint8_t i2c_broadcast_addr = 0x00;
 
-    // interface to receive comands from the computer
-    interface();
-
-    // simulate the sytem respose
-    u_sim = simulator.simulate(micros());
-
-    u_real = n_to_volt(analogRead(A0));
-
-    // apply anti-windup to the system
-    controller.anti_wind_up();
-
-    // compute the feedback control signal
-    controller.calc_u_fb(u_sim, u_real);
-
-    // compute the feedforward control signal
-    controller.calc_u_ff(simulator.get_gain());
-
-    // compute the new control signal
-    u_cont = controller.get_control_signal();
-
-    // change LED intensity
-    analogWrite(LED_PIN, volt_to_n(u_cont));
-
-    // store duty cycle and lux in buffer
-    duty_cycle = u_cont / V_REF;
-    lux = ldr_volt_to_lux(n_to_volt(analogRead(A0)), M, B);
-    data = {duty_cycle, lux};
-    buffer.insert_new(data);
-
-    // compute the visibility error (not averaged)
-    visibility_error += max(0, controller.get_lux_ref() - lux);
-
-    // compute accumulated energy comsuption before changing the control signal
-    total_energy += NOMINAL_POWER * duty_cycle * sampling_time * pow(10, -3);
-
-    // compute the total flicker error
-    if (iteration_counter > 2) {
-        if ((lux - prev_lux_1) * (prev_lux_1 * prev_lux_2) < 0) {
-            flicker = (abs(lux - prev_lux_1) + abs(prev_lux_1 * prev_lux_2)) /
-                      (2 * sampling_time * pow(10, -3));
-        } else {
-            flicker = 0.0f;
+  my_i2c_msg tx_msg = { i2c_address, millis(), (uint16_t) ID, '-'};
+  
+  if(STATE == 1){
+    if(ID == NUMBER_OF_RPI){ // Hub makes sure that everybody as all the gains!
+      finish_flag = true;
+      delay(500);
+      for(i = 0; i < NUMBER_OF_RPI; i++){
+        if(i2c_all_addresses[i] == 0){
+          finish_flag = false;
+          tx_msg.value = (uint16_t) i + 1;
+          memcpy(tx_buf, &tx_msg, msg_size);
+          Wire.beginTransmission(i2c_broadcast_addr);
+          Wire.write(tx_buf, frame_size);
+          i2c_error_code = Wire.endTransmission();
+          delay(500);
         }
-
-        flicker_error += flicker;
-
-        prev_lux_2 = prev_lux_1;
-        prev_lux_1 = lux;
-    } else if (iteration_counter == 2) {
-        prev_lux_1 = lux;
-    } else {
-        prev_lux_2 = lux;
+      }
+      if(finish_flag == true){
+        STATE = 2; // Calibrate State
+        HUB_FLAG = true;
+      }
     }
+    else STATE = 0; // Idle State
+  }
 
-    // stream duty cycle
-    if (stream_duty_cycle) {
-        Serial.printf("s d %c %f %d\n", lum, duty_cycle, millis());
+  if(HUB_FLAG == true){
+    switch(STATE){
+
+      case 2:
+        //Serial.println("STARTING OBTAINING GAINS");
+        tx_msg = { i2c_address, millis(), (uint16_t) 1, '!'};
+        memcpy(tx_buf, &tx_msg, msg_size);
+        i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);
+        delay(100);
+        tx_msg = { i2c_address, millis(), (uint16_t) 2, '!'};
+        memcpy(tx_buf, &tx_msg, msg_size);
+        i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);
+        delay(100);
+        tx_msg = { i2c_address, millis(), (uint16_t) 3, '!'};
+        memcpy(tx_buf, &tx_msg, msg_size);
+        i2c_error_code = masterTransmission(i2c_broadcast_addr, tx_buf);  
+        Serial.println("STARTING GAINS");
+        Serial.print(gains[0], 6); Serial.print(" ");
+        Serial.print(gains[1], 6); Serial.print(" ");
+        Serial.println(gains[2], 6);
+        STATE = 0; // Idle   
+        break;
+        
+     default:
+        STATE = 0; // Idle  
+        break;
+      
     }
+  }
 
-    // stream lux
-    if (stream_lux) {
-        Serial.printf("s l %c %f %d\n", lum, lux, millis());
+  if(STATE == 0){
+    delay(500);
+    Serial.println("--------------------------------------------------------------"); 
+    Serial.print("My Address: "); Serial.print(i2c_address, BIN);
+    Serial.print("\t My ID: "); Serial.print(ID);
+    Serial.print("\t My STATE: "); Serial.println(STATE); 
+    Serial.println("--------------------------------------------------------------"); 
+    for(i = 0; i < NUMBER_OF_RPI; i++){
+      Serial.print("Address: "); Serial.print(i2c_all_addresses[i], BIN);
+      Serial.print("\tID: "); Serial.println(i+1); 
     }
-
-    // read buffer
-    if (buffer_read_counter < buffer_read_size) {
-        int t = 20;
-        if (buffer_read_size - buffer_read_counter < t) {
-            t = buffer_read_size - buffer_read_counter;
-        }
-
-        for (int i = 0; i < t; i++) {
-            data = buffer.remove_oldest();
-
-            if (buffer_duty_cycle) {
-                Serial.printf("%f, ", data.duty_cycle);
-            }
-
-            if (buffer_lux) {
-                Serial.printf("%f, ", data.lux);
-            }
-
-            buffer_read_counter++;
-        }
-    } else {
-        if (buffer_duty_cycle || buffer_lux) {
-            Serial.println();
-        }
-        buffer_duty_cycle = false;
-        buffer_lux = false;
-        buffer_read_size = 0;
-        buffer_read_counter = 0;
-    }
-
-    // delay the time left to reach the sampling_time
-    final_time = micros();
-    delay(sampling_time - ((final_time - initial_time) * pow(10, -3)));
+    Serial.println("--------------------------------------------------------------"); 
+  }
+  delay(1000);
+  
 }
-*/
