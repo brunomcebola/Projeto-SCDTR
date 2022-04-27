@@ -1,8 +1,9 @@
 #include <Wire.h>
 #include <hardware/flash.h>
+#include "consensus.h"
 
 int ID;
-const int NUMBER_OF_RPI = 3;
+const int NUMBER_OF_RPI = N_RPI;
 int STATE = 1; // Wake Up State
 bool HUB_FLAG = false;
 /*
@@ -41,17 +42,16 @@ float gains[3]{1,1,1};
 uint8_t i2c_all_addresses[NUMBER_OF_RPI] = {0};
 
 void setup() {
+  
   delay(10000);
   Serial.begin(115200);
-  randomSeed(analogRead(A1));
+  randomSeed(analogRead(A1) + micros());
   delay(random(1000,2000));
   
-
   Wire.setSDA(12);
   Wire.setSCL(13);
   Wire1.setSDA(10);
   Wire1.setSCL(11);
-  
   
   Wire.setClock(100000);
   Wire.begin(); // Initiate as Master
