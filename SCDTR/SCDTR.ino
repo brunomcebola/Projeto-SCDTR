@@ -72,7 +72,7 @@ void loop() {
   byte tx_buf[frame_size];
   uint8_t i2c_broadcast_addr = 0x00;
 
-  my_i2c_msg tx_msg = { i2c_address, millis(), (uint16_t) ID, '-'};
+  my_i2c_msg tx_msg = {i2c_address, millis(), (uint16_t) ID, '-'};
   
   if(STATE == 1){
     if(ID == NUMBER_OF_RPI){ // Hub makes sure that everybody as all the gains!

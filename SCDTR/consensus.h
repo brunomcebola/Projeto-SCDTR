@@ -13,7 +13,7 @@ class consensus{
   public: 
     // Constructor
     consensus(int N);
-    void defining(int id, float* K, float my_cost, float ext, float lum);
+    void defining(int id, float* K, float my_cost, float ext, float lum, float r);
 
     // Accessors
     float get_d_av(int index);
@@ -26,8 +26,8 @@ class consensus{
 
     // Consensus
     bool check_feasibility(float* d);
-    float evaluate_cost(float* d, float rho);
-    float iterate(float rho);
+    float evaluate_cost(float* d);
+    float iterate(void);
     float vec_mult(float* vec1, float* vec2);
     float get_gain(int index);
  
@@ -44,6 +44,7 @@ class consensus{
     float o;
     float L;
     float best_cost;
+    float rho;
 
 };
 
