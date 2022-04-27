@@ -163,8 +163,6 @@ void recv(int len) {
     byte rx_buf[frame_size] = {0};
     i2c_msg msg;
     int lum;
-    int i;
-    float f;
 
     n_available_bytes = Wire1.available();
     if (n_available_bytes != len) {
@@ -306,7 +304,7 @@ void recv(int len) {
 
         // Interface responses
         case '?': {
-            lum = find_index(i2c_addresses, NUMBER_OF_RPI, msg.node);
+            lum = find_index<uint8_t>(i2c_addresses, NUMBER_OF_RPI, msg.node);
 
             switch (msg.sub_cmd) {
                 case 'a':
@@ -335,14 +333,14 @@ void recv(int len) {
 
         // Stream
         case '*': {
-            lum = find_index(i2c_addresses, NUMBER_OF_RPI, msg.node);
+            lum = find_index<uint8_t>(i2c_addresses, NUMBER_OF_RPI, msg.node);
             print_stream(msg.sub_cmd, lum, msg.value_f, msg.t);
             break;
         }
 
         // Buffer
         case '$': {
-            lum = find_index(i2c_addresses, NUMBER_OF_RPI, msg.node);
+            lum = find_index<uint8_t>(i2c_addresses, NUMBER_OF_RPI, msg.node);
             print_buffer(msg.sub_cmd, lum, msg.value_i, msg.value_f);
         }
     }
@@ -415,7 +413,7 @@ uint8_t wake_up(void) {
 void send_id(uint8_t send_addr) {
     byte tx_buf[frame_size];
 
-    i2c_msg tx_msg = {i2c_address, '@', '\0', ID, 0};
+    i2c_msg tx_msg = {i2c_address, '@', '\0',  (uint16_t)ID, 0};
 
     memcpy(tx_buf, &tx_msg, msg_size);
 
@@ -457,7 +455,7 @@ void set_feedforward_state(bool state) { controller.set_ff_usage(state); }
 void set_feedback_state(bool state) { controller.set_fb_usage(state); }
 
 // send responses
-void send_float(char sub_cmd, float val) {
+void send_float(char sub_cmd) {
     float val;
 
     switch (sub_cmd) {
@@ -529,7 +527,7 @@ void send_int(char sub_cmd) {
     }
 
     byte tx_buf[frame_size];
-    i2c_msg tx_msg = {i2c_address, '?', sub_cmd, val, 0.0f};
+    i2c_msg tx_msg = {i2c_address, '?', sub_cmd,  (uint16_t)val, 0.0f};
     memcpy(tx_buf, &tx_msg, msg_size);
     masterTransmission(i2c_addresses[2], tx_buf);
 }
@@ -543,7 +541,7 @@ void send_stream(char sub_cmd, float val) {
 
 void send_buffer(char sub_cmd, float val, int iter) {
     byte tx_buf[frame_size];
-    i2c_msg tx_msg = {i2c_address, '$', sub_cmd, iter, val};
+    i2c_msg tx_msg = {i2c_address, '$', sub_cmd,  (uint16_t)iter, val};
     memcpy(tx_buf, &tx_msg, msg_size);
     masterTransmission(i2c_addresses[2], tx_buf);
 }

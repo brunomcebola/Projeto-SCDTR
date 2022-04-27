@@ -1,5 +1,4 @@
 #include <cmath>
-#include <iostream>
 
 using namespace std;
 
@@ -127,10 +126,6 @@ int main(){
         av1[i] = (d11[i]+d21[i])/2;
         av2[i] = (d12[i]+d22[i])/2;
     }
-
-    cout << d[0] << endl;
-    cout << d[1] << endl;
-    cout << cost << endl;
 
     return 0;
 }

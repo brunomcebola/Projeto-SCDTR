@@ -36,6 +36,7 @@ float get_tau_for_n(int n) {
         (-5.82 * pow(10, -21) * pow(n, 6)));
 }
 
-int find_index(uint8_t arr[], int len, uint8_t v) {
+template <class T>
+int find_index(T arr[], int len, T v) {
     return distance(arr, find(arr, arr + len, v));
 }

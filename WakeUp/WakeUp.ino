@@ -82,7 +82,7 @@ void loop() {
     byte tx_buf[frame_size];
     uint8_t i2c_broadcast_addr = 0x00;
 
-    i2c_msg tx_msg = {i2c_address, '-', '\0', ID, 0.0f};
+    i2c_msg tx_msg = {i2c_address, '-', '\0', (uint16_t)ID, 0.0f};
 
     if (STATE == 1) {
         if (ID ==
