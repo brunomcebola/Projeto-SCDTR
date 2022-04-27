@@ -45,7 +45,7 @@ void setup() {
   
   delay(10000);
   Serial.begin(115200);
-  randomSeed(analogRead(A1));
+  randomSeed(analogRead(A1) + micros());
   delay(random(1000,2000));
   
   Wire.setSDA(12);

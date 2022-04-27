@@ -2,95 +2,61 @@
 #include <iostream>
 #include "consensus.h"
 
+using namespace std;
+
 /*
+ * g++ consensus.h consensus.cpp -o consensus
+ * ./consensus
+ */
+
 float cost{0};
-float d[2]{0.0,0.0};
 
 //case 1
-float L1 = 80, L2 = 150;
-float o1 = 50, o2 = 50;
-float c1 = 1, c2=1;
+float L1 = 80, L2 = 150, L3 = 120;
+float o1 = 50, o2 = 50, o3 = 50;
+float c1 = 1, c2 = 1, c3 = 1;
 float rho =0.07;
 int maxiter = 50;
-float k11= 2, k12=0.5, k21=0.5, k22=2;
+float k11 = 2, k12 = 0.5, k13 = 0.5, k21 = 0.5, k22 = 2, k23=0.5, k31 = 0.5, k32 = 0.5, k33 = 2.0;
+float K[N_RPI][N_RPI]{k11, k12, k13, k21, k22, k23, k31, k32, k33};
+float c[N_RPI]{c1,c2,c3};
+float L[N_RPI]{L1,L2,L3};
+float o[N_RPI]{o1,o2,03}; 
 
-float K[2][2]{k12, k12, k21,k22};
-float c[2]{c1,c2};
-float L[2]{L1,L2};
-float o[2]{o1,o2}; 
-
-//check if it is going well
-float d11[50]{0};
-float d12[50]{0};
-float d21[50]{0};
-float d22[50]{0};
-
-float av1[50]{0};
-float av2[50]{0};
-*/
-
-/*
 int main(){
-    consensus_node node1; 
-    node1.index = 0;
-    for(int i = 0; i < 2; i++){
-      node1.d[i] = 0.0;
-      node1.d_av[i] = 0.0;
-      node1.y[i] = 0.0;
-    }
-    node1.gain[0] = k11;
-    node1.gain[1] = k12;
-    node1.n = k11*k11 + k12*k12;
-    node1.m = k12*k12;
-    node1.c[0] = c1;
-    node1.c[1] = 0.0;
-    node1.o = o1;
-    node1.L = L1;
-    
-    consensus_node node2;
-    node2.index = 1;
-    for(int i = 0; i < 2; i++){
-      node2.d[i] = 0.0;
-      node2.d_av[i] = 0.0;
-      node2.y[i] = 0.0;
-    }
-    node2.gain[0] = k21;
-    node2.gain[1] = k22;
-    node2.n = k22*k22 + k21*k21;
-    node2.m = k21*k21;
-    node2.c[0] = 0.0;
-    node2.c[1] = c2;
-    node2.o = o2;
-    node2.L = L2;
+    consensus node1(N_RPI); 
+    consensus node2(N_RPI); 
+    consensus node3(N_RPI); 
+
+    node1.defining(1, K[0], c[0], o[0], L[0]);
+    node2.defining(2, K[1], c[1], o[1], L[1]);
+    node3.defining(3, K[2], c[2], o[2], L[2]);
 
     for(int i = 1; i < maxiter; i++){
-        iterate(&node1, 0.07,i);
-        iterate(&node2, 0.07,i);
+        node1.iterate(rho);
+        node2.iterate(rho);
+        node3.iterate(rho);
         
-        node1.d_av[0] = (node1.d[0] + node2.d[0])/2;
-        node1.d_av[1] = (node1.d[1] + node2.d[1])/2;
+        for(int j = 0; j < N_RPI; j++){
+          node1.set_d_av((node1.get_d(j) + node2.get_d(j) + node3.get_d(j))/N_RPI, j);
+          node2.set_d_av((node1.get_d(j) + node2.get_d(j) + node3.get_d(j))/N_RPI, j);
+          node3.set_d_av((node1.get_d(j) + node2.get_d(j) + node3.get_d(j))/N_RPI, j);
+        }
 
-        node2.d_av[0] = (node1.d[0] + node2.d[0])/2;
-        node2.d_av[1] = (node1.d[1] + node2.d[1])/2;
+        for(int j = 0; j < N_RPI; j++){
+          node1.set_y(node1.get_y(j) + rho*(node1.get_d(j)-node1.get_d_av(j)), j);
+          node2.set_y(node2.get_y(j) + rho*(node2.get_d(j)-node2.get_d_av(j)), j);
+          node3.set_y(node3.get_y(j) + rho*(node3.get_d(j)-node3.get_d_av(j)), j);
+        }
         
-        node1.y[0] = node1.y[0] + rho*(node1.d[0]-node1.d_av[0]);
-        node1.y[1] = node1.y[1] + rho*(node1.d[1]-node1.d_av[1]);
-
-        node2.y[0] = node2.y[0] + rho*(node2.d[0]-node2.d_av[0]);
-        node2.y[1] = node2.y[1] + rho*(node2.d[1]-node2.d_av[1]);
-
-        d11[i] = node1.d[0];
-        d12[i] = node1.d[1];
-        d21[i] = node2.d[0];
-        d22[i] = node2.d[1];
-
-        av1[i] = (d11[i]+d21[i])/2;
-        av2[i] = (d12[i]+d22[i])/2;
     }
-
+    cout << "OUTPUT"<< endl;
+    cout << node1.get_d(0) << " " << node1.get_d(1) << " " << node1.get_d(2) << endl;
+    cout << node2.get_d(0) << " " << node2.get_d(1) << " " << node2.get_d(2) << endl;
+    cout << node3.get_d(0) << " " << node3.get_d(1) << " " << node3.get_d(2) << endl;
+    
     return 0;
 }
-*/
 
 // Class Constructor
 consensus::consensus(int N){
@@ -128,9 +94,10 @@ void consensus::defining(int id, float* K, float my_cost, float ext, float lum){
     else c[i] = 0.0;
 
   }
-
-  n = 0; // TODO
-  m = 0; // TODO
+  
+  n = 0;
+  for(int i = 0; i < n_rpi; i++ ) n += gain[i]*gain[i];
+  m = n - gain[index]*gain[index];
 
   o = ext;
   L = lum;
@@ -177,7 +144,7 @@ float consensus::evaluate_cost(float* d, float rho){
 }
 
 // Consensus Algorithm Iteration
-float consensus::iterate(float rho, float iter){
+float consensus::iterate(float rho){
 
     float d_best[n_rpi]{-1};
     float cost_best{10000}; // large num
@@ -202,9 +169,11 @@ float consensus::iterate(float rho, float iter){
     // conditions start here
     float d_u[n_rpi];
     for(i = 0; i < n_rpi; i++){
-      z[i] = d_av[i] * rho - y[i] - c[i];
+      z[i] = d_av[i]*rho - y[i] - c[i];
       d_u[i] = z[i] / rho;
+      // if(index == 0) cout << z[i] << " " << d_av[i] << " " << y[i] << endl;
     }
+    // if(index == 0) cout << endl;
 
     // unconstrained minimum
     sol_unconstrained = check_feasibility(d_u);
@@ -301,7 +270,11 @@ float consensus::iterate(float rho, float iter){
     }
 
     // final results
-    for(i = 0; i < n_rpi; i++) d[i] = d_best[i];
+    for(i = 0; i < n_rpi; i++){
+      d[i] = d_best[i];
+      if(index == 0) cout << d[i] << endl;
+    }
+    if(index == 0) cout << endl;
     best_cost = cost_best;
 
     return cost_best;
@@ -320,3 +293,13 @@ float consensus::vec_mult(float* vec1, float* vec2){
     return mult;
 
 }
+
+// Accessors
+float consensus::get_d_av(int index) { return d_av[index]; }
+float consensus::get_d(int index) { return d[index]; }
+float consensus::get_y(int index) { return y[index]; }
+float consensus::get_gain(int index) { return gain[index]; }
+
+// Modify
+void consensus::set_d_av(float val, int index) { d_av[index] = val; }
+void consensus::set_y(float val, int index) { y[index] = val; }

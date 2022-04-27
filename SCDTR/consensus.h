@@ -11,15 +11,28 @@
 class consensus{
 
   public: 
-    consensus(int N); // Constructor
+    // Constructor
+    consensus(int N);
     void defining(int id, float* K, float my_cost, float ext, float lum);
+
+    // Accessors
+    float get_d_av(int index);
+    float get_d(int index);
+    float get_y(int index);
+    
+    // Modify
+    void set_d_av(float val, int index);
+    void set_y(float val, int index);
+
+    // Consensus
     bool check_feasibility(float* d);
     float evaluate_cost(float* d, float rho);
-    float iterate(float rho, float iter);
+    float iterate(float rho);
     float vec_mult(float* vec1, float* vec2);
+    float get_gain(int index);
  
   private:
-    static int n_rpi;
+    int n_rpi;
     int index;
     float d[N_RPI];
     float d_av[N_RPI];
