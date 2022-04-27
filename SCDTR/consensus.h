@@ -19,10 +19,15 @@ class consensus{
     float get_d_av(int index);
     float get_d(int index);
     float get_y(int index);
+    float get_boundary_occupied(void);
+    float get_boundary_unoccupied(void);
     
     // Modify
     void set_d_av(float val, int index);
     void set_y(float val, int index);
+    void set_occupation(bool state);
+    void set_uboundary(float val);
+    void set_oboundary(float val);
 
     // Consensus
     bool check_feasibility(float* d);
@@ -45,6 +50,9 @@ class consensus{
     float L;
     float best_cost;
     float rho;
+    bool occupied_flag;
+    float unoccupied_lower_boundary;
+    float occupied_lower_boundary;
 
 };
 

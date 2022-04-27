@@ -1,66 +1,5 @@
 #include <cmath>
-// #include <iostream>
 #include "consensus.h"
-
-// using namespace std;
-
-/*
- * g++ consensus.h consensus.cpp -o consensus
- * ./consensus
- */
-
-/*
-
-float cost[N_RPI]{0};
-
-//case 1
-float L1 = 80, L2 = 150, L3 = 120;
-float o1 = 50, o2 = 50, o3 = 50;
-float c1 = 1, c2 = 1, c3 = 1;
-float rho =0.07;
-int maxiter = 50;
-float k11 = 2, k12 = 0.5, k13 = 0.5, k21 = 0.5, k22 = 2, k23=0.5, k31 = 0.5, k32 = 0.5, k33 = 2.0;
-float K[N_RPI][N_RPI]{k11, k12, k13, k21, k22, k23, k31, k32, k33};
-float c[N_RPI]{c1,c2,c3};
-float L[N_RPI]{L1,L2,L3};
-float o[N_RPI]{o1,o2,o3}; 
-
-int main(){
-    consensus node1(N_RPI); 
-    consensus node2(N_RPI); 
-    consensus node3(N_RPI); 
-
-    node1.defining(1, K[0], c[0], o[0], L[0], rho);
-    node2.defining(2, K[1], c[1], o[1], L[1], rho);
-    node3.defining(3, K[2], c[2], o[2], L[2], rho);
-
-    for(int i = 1; i < maxiter; i++){
-        cost[0] = node1.iterate();
-        cost[1] = node2.iterate();
-        cost[2] = node3.iterate();
-        
-        for(int j = 0; j < N_RPI; j++){
-          node1.set_d_av((node1.get_d(j) + node2.get_d(j) + node3.get_d(j))/N_RPI, j);
-          node2.set_d_av((node1.get_d(j) + node2.get_d(j) + node3.get_d(j))/N_RPI, j);
-          node3.set_d_av((node1.get_d(j) + node2.get_d(j) + node3.get_d(j))/N_RPI, j);
-        }
-
-        for(int j = 0; j < N_RPI; j++){
-          node1.set_y(node1.get_y(j) + rho*(node1.get_d(j)-node1.get_d_av(j)), j);
-          node2.set_y(node2.get_y(j) + rho*(node2.get_d(j)-node2.get_d_av(j)), j);
-          node3.set_y(node3.get_y(j) + rho*(node3.get_d(j)-node3.get_d_av(j)), j);
-        }
-        
-    }
-    cout << "OUTPUT"<< endl;
-    cout << node1.get_d(0) << " " << node1.get_d(1) << " " << node1.get_d(2) << endl;
-    cout << node2.get_d(0) << " " << node2.get_d(1) << " " << node2.get_d(2) << endl;
-    cout << node3.get_d(0) << " " << node3.get_d(1) << " " << node3.get_d(2) << endl;
-    
-    return 0;
-}
-
-*/
 
 // Class Constructor
 consensus::consensus(int N){
@@ -80,13 +19,21 @@ consensus::consensus(int N){
   o = 0.0;
   L = 0.0;
 
+  occupied_flag = false;
+  unoccupied_lower_boundary = 50.0;
+  occupied_lower_boundary = 0.0;
+
 }
 
-// Define/Redefine Values
+// Define/Redefine Values (Kind of a Reset)
 void consensus::defining(int id, float* K, float my_cost, float ext, float lum, float r){
 
   index = id-1;
   rho = r;
+
+  occupied_flag = true;
+  unoccupied_lower_boundary = 0.0;
+  occupied_lower_boundary = 0.0;
 
   for(int i = 0; i < n_rpi; i++){
 
@@ -241,7 +188,8 @@ float consensus::iterate(void){
     for(int i = 0; i < n_rpi; i++){
        d_l0[i] = z[i]/rho - (gain[i]/m)*(o - L) + (gain[i]/(rho*m))*(gain[index]*z[index] - vec_mult(z, gain));
     }
-    d_l0[index] = 0.0;
+    if(occupied_flag == true) d_l0[index] = occupied_lower_boundary;
+    else d_l0[index] = unoccupied_lower_boundary;
 
     // check feasibility of minimum constrained to linear and 0 boundary
     sol_linear_0 = check_feasibility(d_l0);
@@ -300,7 +248,22 @@ float consensus::get_d_av(int index) { return d_av[index]; }
 float consensus::get_d(int index) { return d[index]; }
 float consensus::get_y(int index) { return y[index]; }
 float consensus::get_gain(int index) { return gain[index]; }
+float consensus::get_boundary_occupied(void) { return occupied_lower_boundary; }
+float consensus::get_boundary_unoccupied(void) { return unoccupied_lower_boundary; }
 
 // Modify
 void consensus::set_d_av(float val, int index) { d_av[index] = val; }
 void consensus::set_y(float val, int index) { y[index] = val; }
+void consensus::set_occupation(bool state) { occupied_flag = state; }
+void consensus::set_uboundary(float val){
+  if(val > occupied_lower_boundary) unoccupied_lower_boundary = occupied_lower_boundary;
+  else if(val < 0.0) unoccupied_lower_boundary = 0.0;
+  else if(val > 100.0) unoccupied_lower_boundary = 100.0;
+  else unoccupied_lower_boundary = val;
+}
+void consensus::set_oboundary(float val){
+  if(val < occupied_lower_boundary) occupied_lower_boundary = unoccupied_lower_boundary;
+  else if(val < 0.0) occupied_lower_boundary = 0.0;
+  else if(val > 100.0) occupied_lower_boundary = 100.0;
+  else occupied_lower_boundary = val;
+}
