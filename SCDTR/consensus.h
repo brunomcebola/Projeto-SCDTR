@@ -8,11 +8,11 @@
 
 #define N_RPI 3
 
-class consensus{
+class Consensus{
 
   public: 
     // Constructor
-    consensus(int N);
+    Consensus(int N);
     void defining(int id, float* K, float my_cost, float ext, float lum, float r);
 
     // Accessors
@@ -21,6 +21,8 @@ class consensus{
     float get_y(int index);
     float get_boundary_occupied(void);
     float get_boundary_unoccupied(void);
+    float get_gain(int index);
+    float get_cost(void);
     
     // Modify
     void set_d_av(float val, int index);
@@ -28,13 +30,14 @@ class consensus{
     void set_occupation(bool state);
     void set_uboundary(float val);
     void set_oboundary(float val);
+    void set_cost(float val);
 
     // Consensus
     bool check_feasibility(float* d);
     float evaluate_cost(float* d);
     float iterate(void);
     float vec_mult(float* vec1, float* vec2);
-    float get_gain(int index);
+
  
   private:
     int n_rpi;

@@ -1,6 +1,9 @@
 #include "mixin.h"
 
 #include <math.h>
+#include <stdint.h>
+
+#include <algorithm>
 
 #include "constants.h"
 
@@ -32,4 +35,26 @@ float get_tau_for_n(int n) {
         (-1.86 * pow(10, -6) * pow(n, 2)) + (1.39 * pow(10, -9) * pow(n, 3)) +
         (-4.95 * pow(10, -13) * pow(n, 4)) + (8.58 * pow(10, -17) * pow(n, 5)) +
         (-5.82 * pow(10, -21) * pow(n, 6)));
+}
+
+int find_index_int(uint8_t arr[], int len, uint8_t v) {
+    int i = 0;
+    while (i < len) {
+        if (arr[i] == v) {
+            break;
+        }
+        i++;
+    }
+    return i;
+}
+
+int find_index_char(const char arr[], int len, const char v) {
+    int i = 0;
+    while (i < len) {
+        if (arr[i] == v) {
+            break;
+        }
+        i++;
+    }
+    return i;
 }
