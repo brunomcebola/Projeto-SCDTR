@@ -13,7 +13,12 @@ float get_ldr_resistance_from_v(float v, float m, float b);
 float get_ldr_resistance_from_lux(float lux, float m, float b);
 float get_tau_for_n(int n);
 
-template <class T>
-int find_index(T arr[], int len, T v);
+// template <class T>
+// int find_index(T arr[], int len, T v);
+
+/**/
+
+int find_index_int(uint8_t arr[], int len, uint8_t v);
+int find_index_char(const char arr[], int len, const char v);
 
 #endif

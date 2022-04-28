@@ -36,7 +36,29 @@ float get_tau_for_n(int n) {
         (-5.82 * pow(10, -21) * pow(n, 6)));
 }
 
-template <class T>
-int find_index(T arr[], int len, T v) {
-    return distance(arr, find(arr, arr + len, v));
+//template <class T>
+//int find_index(T arr[], int len, T v) {
+//    return distance(arr, find(arr, arr + len, v));
+//}
+
+int find_index_int(uint8_t arr[], int len, uint8_t v) {
+    int i = 0;
+    while (i < len) {
+        if (arr[i] == v) {
+            break;
+        }
+        i++;
+    }
+    return i;
+}
+
+int find_index_char(const char arr[], int len, const char v) {
+    int i = 0;
+    while (i < len) {
+        if (arr[i] == v) {
+            break;
+        }
+        i++;
+    }
+    return i;
 }

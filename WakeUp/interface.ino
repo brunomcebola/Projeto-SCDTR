@@ -76,6 +76,8 @@ void interface() {
                 Serial.read();
                 val_f = read_number<float>(1);
 
+                Serial.printf("Recebi da linha de cmd: %c", cmd);
+
                 interface_redirect(i2c_addresses[lum - '1'], cmd, '\0', 0,
                                    val_f);
 
@@ -87,7 +89,7 @@ void interface() {
                 Serial.read();
                 lum = Serial.read();
 
-                if (find_index<const char>(GETS, N_GETS, sub_cmd) < N_GETS) {
+                if (find_index_char(GETS, N_GETS, sub_cmd) < N_GETS) {
                     interface_redirect(i2c_addresses[lum - '1'], cmd, sub_cmd,
                                        0, 0.0f);
                 }
@@ -100,7 +102,7 @@ void interface() {
                 Serial.read();
                 lum = Serial.read();
 
-                if (find_index<const char>(STREAMS, N_STREAMS, sub_cmd) < N_STREAMS) {
+                if (find_index_char(STREAMS, N_STREAMS, sub_cmd) < N_STREAMS) {
                     interface_redirect(i2c_addresses[lum - '1'], cmd, sub_cmd,
                                        0, 0.0f);
                 }
@@ -112,7 +114,7 @@ void interface() {
                 sub_cmd = Serial.read();
                 Serial.read();
 
-                if (find_index<const char>(BUFFER, N_BUFFER, sub_cmd) < N_BUFFER) {
+                if (find_index_char(BUFFER, N_BUFFER, sub_cmd) < N_BUFFER) {
                     lum = Serial.read();
 
                     interface_redirect(i2c_addresses[lum - '1'], cmd, sub_cmd,

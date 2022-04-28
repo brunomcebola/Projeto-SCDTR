@@ -167,6 +167,7 @@ void recv(int len) {
     n_available_bytes = Wire1.available();
     if (n_available_bytes != len) {
         // Do Something for Debug...
+        Serial.printf("ERRO COM FRAMESIZE");
     }
 
     for (i = 0; i < len; i++) rx_buf[i] = Wire1.read();
@@ -176,6 +177,8 @@ void recv(int len) {
     }
 
     memcpy(&msg, rx_buf, msg_size);
+
+    Serial.printf("Something %c %d\n", msg.cmd, msg.value_i);
 
     switch (msg.cmd) {
         // Received Address
@@ -304,7 +307,7 @@ void recv(int len) {
 
         // Interface responses
         case '?': {
-            lum = find_index<uint8_t>(i2c_addresses, NUMBER_OF_RPI, msg.node);
+            lum = find_index_int(i2c_addresses, NUMBER_OF_RPI, msg.node);
 
             switch (msg.sub_cmd) {
                 case 'a':
@@ -333,14 +336,14 @@ void recv(int len) {
 
         // Stream
         case '*': {
-            lum = find_index<uint8_t>(i2c_addresses, NUMBER_OF_RPI, msg.node);
+            lum = find_index_int(i2c_addresses, NUMBER_OF_RPI, msg.node);
             print_stream(msg.sub_cmd, lum, msg.value_f, msg.t);
             break;
         }
 
         // Buffer
         case '$': {
-            lum = find_index<uint8_t>(i2c_addresses, NUMBER_OF_RPI, msg.node);
+            lum = find_index_int(i2c_addresses, NUMBER_OF_RPI, msg.node);
             print_buffer(msg.sub_cmd, lum, msg.value_i, msg.value_f);
         }
     }
@@ -413,7 +416,7 @@ uint8_t wake_up(void) {
 void send_id(uint8_t send_addr) {
     byte tx_buf[frame_size];
 
-    i2c_msg tx_msg = {i2c_address, '@', '\0',  (uint16_t)ID, 0};
+    i2c_msg tx_msg = {i2c_address, '@', '\0', (uint16_t)ID, 0};
 
     memcpy(tx_buf, &tx_msg, msg_size);
 
@@ -428,7 +431,7 @@ void send_id(uint8_t send_addr) {
 
 // duty cycle
 void set_instantaneous_duty_cycle(float dc) {
-    analogWrite(LED_PIN, duty_cycle * ANALOG_MAX);
+    analogWrite(LED_PIN, dc * ANALOG_MAX);
 }
 
 // lux ref
@@ -527,7 +530,7 @@ void send_int(char sub_cmd) {
     }
 
     byte tx_buf[frame_size];
-    i2c_msg tx_msg = {i2c_address, '?', sub_cmd,  (uint16_t)val, 0.0f};
+    i2c_msg tx_msg = {i2c_address, '?', sub_cmd, (uint16_t)val, 0.0f};
     memcpy(tx_buf, &tx_msg, msg_size);
     masterTransmission(i2c_addresses[2], tx_buf);
 }
@@ -541,7 +544,7 @@ void send_stream(char sub_cmd, float val) {
 
 void send_buffer(char sub_cmd, float val, int iter) {
     byte tx_buf[frame_size];
-    i2c_msg tx_msg = {i2c_address, '$', sub_cmd,  (uint16_t)iter, val};
+    i2c_msg tx_msg = {i2c_address, '$', sub_cmd, (uint16_t)iter, val};
     memcpy(tx_buf, &tx_msg, msg_size);
     masterTransmission(i2c_addresses[2], tx_buf);
 }
